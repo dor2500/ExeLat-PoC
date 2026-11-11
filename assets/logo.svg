@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#111a2e"/>
+      <stop offset="1" stop-color="#070b14"/>
+    </linearGradient>
+    <linearGradient id="acc" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4fd8e0"/>
+      <stop offset="1" stop-color="#f5b941"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <!-- Window frame -->
+  <rect x="232" y="170" width="560" height="400" rx="28" fill="#0b1120" stroke="url(#acc)" stroke-width="14"/>
+  <line x1="232" y1="254" x2="792" y2="254" stroke="url(#acc)" stroke-width="10"/>
+  <circle cx="284" cy="213" r="13" fill="#4fd8e0"/>
+  <circle cx="326" cy="213" r="13" fill="#27365a"/>
+  <circle cx="368" cy="213" r="13" fill="#27365a"/>
+
+  <!-- Left half: text aligned left (LTR) -->
+  <g fill="#4fd8e0">
+    <rect x="276" y="304" width="180" height="22" rx="11"/>
+    <rect x="276" y="352" width="130" height="22" rx="11" opacity=".75"/>
+    <rect x="276" y="400" width="160" height="22" rx="11" opacity=".5"/>
+    <rect x="276" y="484" width="96" height="40" rx="10" opacity=".9"/>
+  </g>
+  <!-- Mirror axis -->
+  <line x1="512" y1="286" x2="512" y2="540" stroke="#27365a" stroke-width="6" stroke-dasharray="14 14"/>
+  <!-- Right half: text aligned right (RTL) -->
+  <g fill="#f5b941">
+    <rect x="568" y="304" width="180" height="22" rx="11"/>
+    <rect x="618" y="352" width="130" height="22" rx="11" opacity=".75"/>
+    <rect x="588" y="400" width="160" height="22" rx="11" opacity=".5"/>
+    <rect x="652" y="484" width="96" height="40" rx="10" opacity=".9"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="512" y="760" text-anchor="middle" font-family="'Segoe UI', Arial, sans-serif" font-weight="700" font-size="170" letter-spacing="-4">
+    <tspan fill="#e8eef7">Exe</tspan><tspan fill="#f5b941">Lat</tspan>
+  </text>
+  <text x="512" y="838" text-anchor="middle" font-family="Consolas, 'Courier New', monospace" font-size="34" letter-spacing="8" fill="#7f8fae">EXECUTABLE TRANSLATOR</text>
+  <text x="512" y="900" text-anchor="middle" font-family="Consolas, 'Courier New', monospace" font-size="30" letter-spacing="6" fill="#4fd8e0">LTR <tspan fill="#7f8fae">→</tspan> <tspan fill="#f5b941">RTL</tspan></text>
+</svg>
