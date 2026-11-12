@@ -31,6 +31,7 @@ Plenty of useful Windows software was never released in Hebrew, and its source c
 ### Verified result
 
 - **Win32:** 7-Zip File Manager (`7zFM.exe`, 406 distinct UI texts) was translated end to end in about 30 seconds. The output starts, its main window reports `WS_EX_LAYOUTRTL`, and its menu reads `קובץ → פתח, שנה שם, מחק, מאפיינים, צור תיקיה…` with shortcuts (`F2`, `Ctrl+N`) intact.
+- **Whole program:** the 7-Zip folder (106 files, 6 of them program files) was scanned and rebuilt as a complete copy by pressing Build in the real app window; four files were rewritten and the copy runs. The scan also reported that 7-Zip already ships `Lang\he.txt`.
 - **Delphi:** Inno Setup Compiler (`Compil32.exe`, 14 forms, 694 texts) was rebuilt with translated forms. The output starts, its forms report right-to-left reading, and form titles and buttons show the Hebrew text.
 
 ## ⬇️ Download
@@ -41,15 +42,16 @@ The file is not code-signed, so SmartScreen will show "Windows protected your PC
 
 ## 🚀 How to use
 
-1. Open `ExeLat.exe` and drop a program on it (or click to choose a file).
-2. Review the **Live Preview**: every dialog, original on one side, mirrored Hebrew on the other.
-3. Press **Translate missing with AI**. Pick how to reach Claude:
+1. Open `ExeLat.exe` and press **Open a whole program folder** (for example `C:\Program Files\7-Zip`), or drop the folder on the window. ExeLat checks every `.exe`, `.dll` and `.mui` in it and lists what it found in each file. A single file works too.
+2. Read the report: which files hold text, which parts are built with something ExeLat cannot reach (.NET, Qt, Electron, packed files), and whether the program already ships its own language files — or even a Hebrew one.
+3. Review the **Live Preview**: every dialog, original on one side, mirrored Hebrew on the other.
+4. Press **Translate missing with AI**. Pick how to reach Claude:
    - **Claude Code (this PC)** — uses the `claude` command line if it is installed. No API key.
    - **Anthropic API key** — paste a key; it is used for that request only and never saved.
-4. Fix anything you like by typing in the Hebrew column. The preview updates as you type.
-5. Press **Build translated EXE** and save the new file **next to the original**, so it finds its DLLs.
+5. Fix anything you like by typing in the Hebrew column. The preview updates as you type.
+6. Press **Build translated program** and choose where to put it. ExeLat makes a complete copy of the program folder named `<program>-he` with every translatable file rebuilt, so the copy runs on its own and the original is untouched.
 
-Programs installed under `C:\Program Files` cannot be written to without administrator rights. Save the output elsewhere and copy it over, or run ExeLat as administrator.
+For a single file, the new file is saved next to the original so it finds its DLLs. Folders under `C:\Program Files` cannot be written to without administrator rights; choose another location such as Documents.
 
 ## ✨ Features
 
@@ -118,6 +120,7 @@ Command line, without the window:
 python main.py app.exe                              # inspect
 python main.py app.exe --out app.he.exe             # glossary only
 python main.py app.exe --out app.he.exe --ai cli --mirror-windows
+python main.py "C:\Program Files\7-Zip" --out "D:\7-Zip-he" --ai cli   # whole program
 ```
 
 Build the single-file executable (needs `pip install pyinstaller`; Node.js only if you changed the UI's CSS classes):

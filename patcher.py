@@ -32,6 +32,26 @@ RT_RCDATA = 10
 LRM = "‎"
 
 
+PE_EXTENSIONS = {".exe", ".dll", ".mui", ".ocx", ".cpl", ".scr", ".bpl", ".ax", ".drv"}
+MAX_PART_SIZE = 300 * 1024 * 1024
+MAX_PARTS = 800
+
+
+def collect_pe_files(folder: str) -> list[str]:
+    """Relative paths of the program files worth opening, top level first."""
+    found = []
+    for directory, subdirs, files in os.walk(folder):
+        depth = os.path.relpath(directory, folder).count(os.sep) + (directory != folder)
+        if depth >= 5:
+            subdirs[:] = []
+        for name in files:
+            path = os.path.join(directory, name)
+            if os.path.splitext(name)[1].lower() in PE_EXTENSIONS and 0 < os.path.getsize(path) <= MAX_PART_SIZE:
+                found.append(os.path.relpath(path, folder))
+    found.sort(key=lambda rel: (rel.count(os.sep), not rel.lower().endswith(".exe"), rel.lower()))
+    return found[:MAX_PARTS]
+
+
 def translate_text(source: str, translations: dict[str, str]) -> str:
     """Look up one resource string. Menu items keep their shortcut hint
     ("Open\\tCtrl+O") even when the translation was written without it."""
@@ -254,8 +274,11 @@ def _fix_checksum(path: str) -> None:
 
 
 def build_translated(source: str, target: str, translations: dict[str, str],
-                     mirror_dialogs: bool = True, mirror_process: bool = False) -> dict:
-    """Write `target`, a copy of `source` with translated, mirrored resources."""
+                     mirror_dialogs: bool = True, mirror_process: bool = False,
+                     require_interface: bool = False) -> dict:
+    """Write `target`, a copy of `source` with translated, mirrored resources.
+    With `require_interface`, a file with no dialogs, forms or translated text
+    is left alone instead of being rewritten just to set the mirroring mark."""
     if os.path.abspath(source).lower() == os.path.abspath(target).lower():
         raise ValueError("The output file must be different from the original.")
 
@@ -264,7 +287,8 @@ def build_translated(source: str, target: str, translations: dict[str, str],
         updates, report = plan_updates(pe, translations, mirror_dialogs, mirror_process)
     finally:
         pe.close()
-    if not updates:
+    touched = report["strings"] + report["dialogs"] + report["menus"] + report["forms"]
+    if not updates or (require_interface and not touched):
         raise ValueError("Nothing to change: no translated text matches this file's resources.")
 
     image, appended, signed = _split_image(source)
@@ -288,4 +312,55 @@ def build_translated(source: str, target: str, translations: dict[str, str],
         "appendedBytes": len(appended) if appended else 0,
         "resourcesWritten": len(updates),
     })
+    return report
+
+
+def build_program(folder: str, out_folder: str, translations: dict[str, str],
+                  mirror_dialogs: bool = True, mirror_process: bool = False, on_progress=None) -> dict:
+    """Make a complete translated copy of a program folder.
+
+    Everything is copied to `out_folder` first, so the result runs on its own
+    and the original stays untouched. Then every executable, DLL and .mui in
+    the copy is rebuilt with translated resources. A part that cannot be
+    rebuilt keeps its original, working copy and is listed in the report.
+    """
+    import shutil
+
+    source_root, target_root = os.path.abspath(folder), os.path.abspath(out_folder)
+    if target_root == source_root or target_root.startswith(source_root + os.sep):
+        raise ValueError("The output folder must be outside the program folder.")
+    if os.path.exists(target_root) and os.listdir(target_root):
+        raise ValueError("The output folder already exists and is not empty.")
+
+    parts = collect_pe_files(source_root)
+    shutil.copytree(source_root, target_root, dirs_exist_ok=True)
+
+    totals = {"strings": 0, "dialogs": 0, "dialogsMirrored": 0, "menus": 0, "menuItems": 0, "controls": 0,
+              "forms": 0, "formTexts": 0, "skipped": 0, "resourcesWritten": 0}
+    report = {**totals, "output": target_root, "folder": True, "processMirrored": False, "signatureRemoved": False,
+              "appendedBytes": 0, "partsChanged": [], "partsFailed": [], "partsTotal": len(parts)}
+    for index, rel in enumerate(parts):
+        if on_progress:
+            on_progress(index, len(parts))
+        source, target = os.path.join(source_root, rel), os.path.join(target_root, rel)
+        try:
+            # Only a program (.exe) has windows of its own to mirror.
+            part = build_translated(source, target, translations, mirror_dialogs=mirror_dialogs,
+                                    mirror_process=mirror_process and rel.lower().endswith(".exe"),
+                                    require_interface=True)
+        except ValueError:
+            shutil.copy2(source, target)              # nothing to translate in this part
+            continue
+        except Exception as error:
+            shutil.copy2(source, target)              # keep the working original
+            report["partsFailed"].append({"file": rel, "error": f"{type(error).__name__}: {error}"})
+            continue
+        for key in totals:
+            report[key] += part[key]
+        report["processMirrored"] |= part["processMirrored"]
+        report["signatureRemoved"] |= part["signatureRemoved"]
+        report["appendedBytes"] += part["appendedBytes"]
+        report["partsChanged"].append(rel)
+    if on_progress:
+        on_progress(len(parts), len(parts))
     return report

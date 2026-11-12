@@ -106,8 +106,9 @@
           <p id="fileInfo" class="mt-4 text-xs text-slate-500"></p>
         </div>
 
+        <button id="folderBtn" class="w-full rounded-lg bg-amber-glow text-ink-950 font-semibold py-2.5 hover:brightness-110 transition disabled:opacity-30 disabled:pointer-events-none" data-i18n="folderBtn"></button>
         <div class="flex gap-3">
-          <button id="demoBtn" class="flex-1 rounded-lg bg-amber-glow text-ink-950 font-semibold py-2.5 hover:brightness-110 transition" data-i18n="runDemo"></button>
+          <button id="demoBtn" class="flex-1 rounded-lg border border-ink-600 text-slate-200 py-2.5 hover:border-slate-400 transition" data-i18n="runDemo"></button>
           <button id="resetBtn" class="rounded-lg border border-ink-600 px-4 py-2.5 text-slate-300 hover:border-slate-400 transition" data-i18n="reset"></button>
         </div>
 
@@ -128,7 +129,7 @@
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div class="rounded-lg bg-ink-800/60 border border-ink-700 p-3"><div id="statSections" class="text-2xl font-bold font-mono">–</div><div class="text-xs text-slate-500" data-i18n="statSections"></div></div>
+          <div class="rounded-lg bg-ink-800/60 border border-ink-700 p-3"><div id="statSections" class="text-2xl font-bold font-mono">–</div><div id="statSectionsLabel" class="text-xs text-slate-500"></div></div>
           <div class="rounded-lg bg-ink-800/60 border border-ink-700 p-3"><div id="statStrings" class="text-2xl font-bold font-mono">–</div><div class="text-xs text-slate-500" data-i18n="statStrings"></div></div>
           <div class="rounded-lg bg-ink-800/60 border border-ink-700 p-3"><div id="statDialogs" class="text-2xl font-bold font-mono">–</div><div class="text-xs text-slate-500" data-i18n="statDialogs"></div></div>
           <div class="rounded-lg bg-ink-800/60 border border-ink-700 p-3"><div id="statTranslated" class="text-2xl font-bold font-mono text-amber-glow">–</div><div class="text-xs text-slate-500" data-i18n="statTranslated"></div></div>
@@ -151,10 +152,13 @@
             <pre id="hex" class="whitespace-pre overflow-hidden"></pre>
           </div>
           <div class="rounded-lg bg-ink-950 border border-ink-700 p-3 h-36 overflow-auto text-xs">
-            <p class="text-slate-500 mb-2" data-i18n="sectionsTitle"></p>
+            <p id="sectionsTitle" class="text-slate-500 mb-2"></p>
             <div id="sections" class="font-mono space-y-1" dir="ltr"></div>
-            <p id="notes" class="mt-2 text-amber-glow/90"></p>
           </div>
+        </div>
+        <div id="notesBox" class="hidden rounded-lg border border-amber-glow/40 bg-amber-glow/5 p-3 text-xs text-amber-glow/90 space-y-1.5">
+          <div id="notes" class="space-y-1.5"></div>
+          <button id="scanFolderBtn" class="hidden underline underline-offset-4 font-semibold"></button>
         </div>
 
         <!-- Build -->
@@ -220,7 +224,7 @@
         <table class="w-full text-sm table-fixed">
           <thead class="sticky top-0 bg-ink-950 text-slate-500 text-xs">
             <tr>
-              <th class="px-3 py-2 font-normal text-start w-28" data-i18n="colWhere"></th>
+              <th class="px-3 py-2 font-normal text-start w-44" data-i18n="colWhere"></th>
               <th class="px-3 py-2 font-normal text-start" data-i18n="colSource"></th>
               <th class="px-3 py-2 font-normal text-start" data-i18n="colHebrew"></th>
               <th class="px-3 py-2 font-normal text-start w-28" data-i18n="colStatus"></th>
@@ -242,6 +246,20 @@
         langBtn: 'עברית', modeDesktop: 'Desktop app', modeBrowser: 'Browser demo · sample data',
         heroTitle: 'Translate compiled Windows apps right-to-left.',
         heroBody: 'Open a Win32 program. ExeLat reads its menus, dialogs and string tables, translates them to Hebrew, mirrors the layout, and writes a translated copy of the .exe.',
+        statFiles: 'files checked',
+        folderBtn: 'Open a whole program folder', scanFolder: (n) => `This folder has ${n} more program files. Check the whole program →`,
+        scanning: (a, b) => (b ? `Checking file ${a} of ${b}…` : 'Checking the program…'),
+        partsTitle: 'Program parts (texts found)', metaFiles: (n) => `${n} program files`,
+        buildFolder: 'Build translated program', buildBusyN: (a, b) => `Building… ${a}/${b}`,
+        buildDoneFolder: (r) => `Translated copy saved in ${r.output} — ${r.partsChanged.length} files rebuilt (${r.partsChanged.slice(0, 6).join(', ')}${r.partsChanged.length > 6 ? '…' : ''}): ${r.strings} strings, ${r.menuItems} menu items, ${r.controls} dialog texts` + (r.forms ? `, ${r.formTexts} texts in ${r.forms} Delphi forms` : '') + `; ${r.dialogsMirrored} dialogs mirrored.`,
+        partsFailed: (n, names) => `${n} file(s) could not be rebuilt and were copied unchanged: ${names}.`,
+        techDotnet: (f) => `.NET code (${f}): its windows are not stored as Win32 resources, so most of its interface cannot be translated here.`,
+        techQt: (f) => `Qt interface (${f}): Qt keeps its texts in .qm files or in code, out of reach here.`,
+        techElectron: 'Electron app: the interface is a web page inside an .asar archive, out of reach here.',
+        techPacked: (f) => `Packed or protected file (${f}): it will probably refuse to run after being changed.`,
+        hintLang: (n, dir) => `The program has its own language files (${n}${dir ? ', in ' + dir : ''}). Text that comes from those files is not changed by ExeLat.`,
+        hintHebrew: (f) => `It already ships a Hebrew language file: ${f}. Try switching the program's language to Hebrew first.`,
+        noteNoTexts: 'No translatable text was found in any file of this program.',
         optDialogs: 'Mirror dialogs', optWindows: 'Mirror main windows',
         build: 'Build translated EXE', buildBusy: 'Building…', reveal: 'Show in folder',
         buildDone: (r) => `Saved ${r.output} — ${r.strings} strings, ${r.menuItems} menu items, ${r.controls} dialog texts` + (r.forms ? `, ${r.formTexts} texts in ${r.forms} Delphi forms (set right-to-left)` : '') + `; ${r.dialogsMirrored} dialogs mirrored${r.processMirrored ? ', main windows mirrored' : ''}.`,
@@ -296,6 +314,20 @@
         langBtn: 'English', modeDesktop: 'אפליקציית שולחן עבודה', modeBrowser: 'הדגמה בדפדפן · נתוני דוגמה',
         heroTitle: 'תרגום תוכנות Windows מקומפלות מימין לשמאל.',
         heroBody: 'פתחו תוכנת Win32. ‏ExeLat קורא את התפריטים, הדיאלוגים וטבלאות המחרוזות, מתרגם אותם לעברית, הופך את הפריסה לימין‑לשמאל, וכותב עותק מתורגם של קובץ ה‑exe.',
+        statFiles: 'קבצים שנבדקו',
+        folderBtn: 'פתח תיקיית תוכנה שלמה', scanFolder: (n) => `בתיקייה הזו יש עוד ${n} קובצי תוכנה. בדוק את התוכנה כולה ←`,
+        scanning: (a, b) => (b ? `בודק קובץ ${a} מתוך ${b}…` : 'בודק את התוכנה…'),
+        partsTitle: 'חלקי התוכנה (טקסטים שנמצאו)', metaFiles: (n) => `${n} קובצי תוכנה`,
+        buildFolder: 'בנה תוכנה מתורגמת', buildBusyN: (a, b) => `בונה… ${a}/${b}`,
+        buildDoneFolder: (r) => `העותק המתורגם נשמר ב‑${r.output} — ${r.partsChanged.length} קבצים נבנו מחדש (${r.partsChanged.slice(0, 6).join(', ')}${r.partsChanged.length > 6 ? '…' : ''}): ${r.strings} מחרוזות, ${r.menuItems} פריטי תפריט, ${r.controls} טקסטים בדיאלוגים` + (r.forms ? `, ${r.formTexts} טקסטים ב‑${r.forms} טפסי Delphi` : '') + `; ${r.dialogsMirrored} דיאלוגים הופכו.`,
+        partsFailed: (n, names) => `${n} קבצים לא נבנו מחדש והועתקו ללא שינוי: ${names}.`,
+        techDotnet: (f) => `קוד ‎.NET‎ (${f}): החלונות שלו לא שמורים כמשאבי Win32, ולכן רוב הממשק שלו לא ניתן לתרגום כאן.`,
+        techQt: (f) => `ממשק Qt‏ (${f}): ‏Qt שומר את הטקסטים בקובצי ‎.qm‎ או בקוד, מחוץ להישג יד כאן.`,
+        techElectron: 'אפליקציית Electron: הממשק הוא דף אינטרנט בתוך ארכיון ‎.asar‎, מחוץ להישג יד כאן.',
+        techPacked: (f) => `קובץ ארוז או מוגן (${f}): כנראה יסרב לרוץ אחרי שינוי.`,
+        hintLang: (n, dir) => `לתוכנה יש קובצי שפה משלה (${n}${dir ? ', בתיקייה ' + dir : ''}). טקסט שמגיע מהקבצים האלה לא משתנה על ידי ExeLat.`,
+        hintHebrew: (f) => `התוכנה כבר כוללת קובץ שפה בעברית: ${f}. נסו קודם להחליף את שפת התוכנה לעברית.`,
+        noteNoTexts: 'לא נמצא טקסט לתרגום באף קובץ של התוכנה.',
         optDialogs: 'היפוך דיאלוגים', optWindows: 'היפוך חלונות ראשיים',
         build: 'בנה EXE מתורגם', buildBusy: 'בונה…', reveal: 'הצג בתיקייה',
         buildDone: (r) => `נשמר ${r.output} — ${r.strings} מחרוזות, ${r.menuItems} פריטי תפריט, ${r.controls} טקסטים בדיאלוגים` + (r.forms ? `, ${r.formTexts} טקסטים ב‑${r.forms} טפסי Delphi (הוגדרו מימין לשמאל)` : '') + `; ${r.dialogsMirrored} דיאלוגים הופכו${r.processMirrored ? ', החלונות הראשיים הופכו' : ''}.`,
@@ -435,10 +467,11 @@
         rows.set(source, { source, where, uses: 1, he, origin: he ? (a.sample ? 'sample' : 'glossary') : '' });
       };
       const dialogs = a.dialogs.filter((d) => d.items.some((i) => i.visible));
-      a.strings.forEach((s) => add(s.source, `STR ${s.id}`));
-      (a.menus || []).forEach((m) => m.items.forEach((text) => add(text, `MENU ${m.name}`)));
-      (a.forms || []).forEach((f) => f.texts.forEach((text) => add(text, `FORM ${f.name}`)));
-      a.dialogs.forEach((d) => { add(d.title, `DLG ${d.name}`); d.items.forEach((i) => i.kind !== 'edit' && add(i.text, `DLG ${d.name}`)); });
+      const at = (x) => (x.part ? x.part.split(/[\\/]/).pop() + ' ' : '');     // which file of the program
+      a.strings.forEach((s) => add(s.source, `${at(s)}STR ${s.id}`));
+      (a.menus || []).forEach((m) => m.items.forEach((text) => add(text, `${at(m)}MENU ${m.name}`)));
+      (a.forms || []).forEach((f) => f.texts.forEach((text) => add(text, `${at(f)}FORM ${f.name}`)));
+      a.dialogs.forEach((d) => { add(d.title, `${at(d)}DLG ${d.name}`); d.items.forEach((i) => i.kind !== 'edit' && add(i.text, `${at(d)}DLG ${d.name}`)); });
       return { ...a, dialogs, rows, list: [...rows.values()], unparsed: a.unparsed || 0 };
     }
     const translatedCount = () => S.list.filter((r) => r.he.trim()).length;
@@ -458,7 +491,10 @@
     function renderInfo() {
       const tones = { idle: 'text-slate-500', ok: 'text-cyanx', bad: 'text-red-400', warn: 'text-amber-glow' };
       $('fileInfo').className = 'mt-4 text-xs ' + tones[info.tone];
-      $('fileInfo').textContent = info.key ? t(info.key, info.arg) : t(desktop ? 'infoIdleDesktop' : 'infoIdleBrowser');
+      $('fileInfo').textContent = busy === 'scan' ? t('scanning', prog.done, prog.total) : info.key ? t(info.key, info.arg) : t(desktop ? 'infoIdleDesktop' : 'infoIdleBrowser');
+      if (busy === 'scan') $('fileInfo').className = 'mt-4 text-xs text-amber-glow';
+      $('folderBtn').disabled = !desktop || !!busy;
+      $('folderBtn').title = desktop ? '' : t('desktopOnly');
     }
 
     function renderSummary() {
@@ -470,18 +506,20 @@
       });
       $('progress').style.width = built ? '100%' : ['0%', '20%', '45%', '70%', '85%'][stage];
       $('hexBox').classList.toggle('scanning', stage >= 1 && stage <= 3);
+      $('statSectionsLabel').textContent = t(S && S.parts ? 'statFiles' : 'statSections');
 
       if (!S) {
         $('fileName').textContent = t('noFile'); $('fileMeta').textContent = '';
         $('statusText').textContent = t('statusIdle');
         ['statSections', 'statStrings', 'statDialogs', 'statTranslated'].forEach((id) => { $(id).textContent = '–'; });
-        $('hex').textContent = ''; $('sections').replaceChildren(); $('notes').textContent = '';
+        $('hex').textContent = ''; $('sections').replaceChildren(); $('notes').replaceChildren();
+        $('sectionsTitle').textContent = t('sectionsTitle'); $('notesBox').classList.add('hidden');
         return;
       }
       $('fileName').textContent = S.file.name;
-      $('fileMeta').textContent = `${fmtSize(S.file.size)} · ${S.file.machine}${S.file.signed ? ' · signed' : ''}`;
+      $('fileMeta').textContent = (S.parts ? `${S.parts.length} files · ` : '') + `${fmtSize(S.file.size)}${S.file.machine ? ' · ' + S.file.machine : ''}${S.file.signed ? ' · signed' : ''}`;
       $('statusText').textContent = stage === 4 ? t('stDone', translatedCount(), S.list.length) : t('st' + stage);
-      $('statSections').textContent = S.sections.length;
+      $('statSections').textContent = S.parts ? S.parts.length : S.sections.length;
       $('statStrings').textContent = S.list.length;
       $('statDialogs').textContent = S.dialogs.length + (S.forms || []).length;
       $('statTranslated').textContent = stage >= 2 ? translatedCount() : 0;
@@ -491,17 +529,44 @@
       for (let i = 0; i < bytes.length; i += 16) hex += i.toString(16).padStart(8, '0').toUpperCase() + '  ' + bytes.slice(i, i + 16).join(' ').toUpperCase() + '\n';
       $('hex').textContent = hex;
 
-      $('sections').replaceChildren(...S.sections.map((s) => {
-        const row = el('div', 'flex justify-between gap-3');
-        row.append(el('span', s.name === '.rsrc' ? 'text-amber-glow' : 'text-slate-300', s.name), el('span', 'text-slate-500', `${fmtSize(s.virtualSize)} / ${fmtSize(s.rawSize)}`));
-        return row;
-      }));
+      $('sectionsTitle').textContent = t(S.parts ? 'partsTitle' : 'sectionsTitle');
+      if (S.parts) {
+        // Files with text first; the rest are listed so the user sees everything was checked.
+        const parts = [...S.parts].sort((a, b) => b.texts - a.texts);
+        $('sections').replaceChildren(...parts.map((p) => {
+          const row = el('div', 'flex justify-between gap-3');
+          const name = el('span', (p.texts ? 'text-slate-200' : 'text-slate-600') + ' truncate', p.file);
+          name.title = p.file;
+          const tags = (p.tech || []).join(' ') + (p.error ? ' unreadable' : '');
+          row.append(name, el('span', (p.texts ? 'text-amber-glow' : 'text-slate-600') + ' shrink-0', `${tags ? tags + ' · ' : ''}${p.texts}`));
+          return row;
+        }));
+      } else {
+        $('sections').replaceChildren(...S.sections.map((s) => {
+          const row = el('div', 'flex justify-between gap-3');
+          row.append(el('span', s.name === '.rsrc' ? 'text-amber-glow' : 'text-slate-300', s.name), el('span', 'text-slate-500', `${fmtSize(s.virtualSize)} / ${fmtSize(s.rawSize)}`));
+          return row;
+        }));
+      }
+
       const notes = [];
+      const filesWith = (tag) => (S.parts ? S.parts.filter((p) => (p.tech || []).includes(tag)).map((p) => p.file.split(/[\\/]/).pop()) : (S.tech || []).includes(tag) ? [S.file.name] : []);
+      const names = (list) => list.slice(0, 3).join(', ') + (list.length > 3 ? '…' : '');
+      if (filesWith('dotnet').length) notes.push(t('techDotnet', names(filesWith('dotnet'))));
+      if (filesWith('qt').length) notes.push(t('techQt', names(filesWith('qt'))));
+      if ((S.tech || []).includes('electron')) notes.push(t('techElectron'));
+      if (filesWith('packed').length) notes.push(t('techPacked', names(filesWith('packed'))));
+      if (S.hints && S.hints.hebrewFile) notes.push(t('hintHebrew', S.hints.hebrewFile));
+      if (S.hints && S.hints.langFiles) notes.push(t('hintLang', S.hints.langFiles, S.hints.langDir));
       if (S.file.signed) notes.push(t('noteSigned'));
       if (S.file.appended > 0) notes.push(t('noteAppended'));
-      if (!S.list.length && !S.dialogs.length) notes.push(t('noteEmpty'));
+      if (!S.list.length) notes.push(t(S.parts ? 'noteNoTexts' : 'noteEmpty'));
       if (S.unparsed > 0) notes.push(t('noteUnparsed', S.unparsed));
-      $('notes').textContent = notes.join(' ');
+      $('notes').replaceChildren(...notes.map((text) => el('p', '', text)));
+      const offerScan = desktop && !S.file.folder && S.file.path && S.siblings > 0;
+      $('scanFolderBtn').classList.toggle('hidden', !offerScan);
+      $('scanFolderBtn').textContent = offerScan ? t('scanFolder', S.siblings) : '';
+      $('notesBox').classList.toggle('hidden', !notes.length && !offerScan);
     }
 
     // One dialog -> DOM. `rtl` mirrors the layout, `translate` swaps in Hebrew.
@@ -652,7 +717,8 @@
       $('aiBtn').disabled = !desktop || !ready || !missing || (provider === 'cli' && !providers.cli)
         || (provider === 'api' && !providers.apiEnv && !$('apiKey').value.trim());
       $('aiBtn').title = !desktop ? t('desktopOnly') : provider === 'cli' && !providers.cli ? t('aiNoCli') : '';
-      $('buildBtn').textContent = busy === 'build' ? t('buildBusy') : t('build');
+      const folder = S && S.file.folder;
+      $('buildBtn').textContent = busy === 'build' ? (folder && prog.total ? t('buildBusyN', prog.done, prog.total) : t('buildBusy')) : t(folder ? 'buildFolder' : 'build');
       $('buildBtn').disabled = !desktop || !ready || !S.file.path || !translatedCount();
       $('buildBtn').title = desktop ? t('buildHint') : t('desktopOnly');
 
@@ -663,11 +729,12 @@
       $('revealBtn').classList.toggle('hidden', !built);
       if (buildError) { $('buildText').textContent = t('buildError', buildError); $('buildText').className = 'text-red-400'; }
       else if (built) {
-        const lines = [t('buildDone', built)];
+        const lines = [t(built.folder ? 'buildDoneFolder' : 'buildDone', built)];
+        if (built.folder && built.partsFailed.length) lines.push(t('partsFailed', built.partsFailed.length, built.partsFailed.map((p) => p.file).slice(0, 4).join(', ')));
         if (built.signatureRemoved) lines.push(t('buildSig'));
         if (built.appendedBytes) lines.push(t('buildAppended'));
         if (built.skipped) lines.push(t('buildSkipped', built.skipped));
-        lines.push(t('buildHint'));
+        if (!built.folder) lines.push(t('buildHint'));
         $('buildText').textContent = lines.join(' ');
         $('buildText').className = 'text-cyanx';
       }
@@ -693,14 +760,25 @@
       if (count) built = null;                               // the previous build is now out of date
       renderAll();
     }
-    window.exelatProgress = (done, total) => { prog = { done, total }; if (busy === 'ai') renderControls(); };
+    window.exelatProgress = (done, total, kind) => {
+      prog = { done, total };
+      if (kind === 'scan') { if (busy !== 'scan') busy = 'scan'; renderInfo(); } else if (busy) renderControls();
+    };
+    window.exelatBusy = () => { busy = 'scan'; prog = { done: 0, total: 0 }; renderInfo(); };
+    // Read by the app's --selftest mode to see what the page shows.
+    window.exelatState = () => ({
+      ready: !!S && stage === 4 && !busy, finished: !!built || !!buildError, desktop, lang,
+      file: S && S.file.name, texts: S ? S.list.length : 0, translated: S ? translatedCount() : 0,
+      parts: S && S.parts ? S.parts.length : 0, status: $('statusText').textContent,
+      buildDisabled: $('buildBtn').disabled, buildText: $('buildText').textContent, built, buildError,
+    });
 
     async function buildExe() {
       const translations = {};
       S.list.forEach((r) => { if (r.he.trim()) translations[r.source] = r.he.trim(); });
-      busy = 'build'; buildError = null; renderSummary(); renderControls();
+      busy = 'build'; buildError = null; prog = { done: 0, total: 0 }; renderSummary(); renderControls();
       let result;
-      try { result = await window.pywebview.api.build(S.file.path, translations, $('optDialogs').checked, $('optWindows').checked); }
+      try { result = await window.pywebview.api.build(S.file.path, translations, $('optDialogs').checked, $('optWindows').checked, window.exelatBuildTarget || ''); }
       catch (error) { result = { ok: false, error: String(error) }; }
       busy = false;
       if (result && result.ok === false) buildError = result.error;
@@ -732,7 +810,8 @@
     }
 
     function handleResult(result) {
-      if (!result) return;                                   // dialog cancelled
+      if (busy === 'scan') busy = false;
+      if (!result) { renderInfo(); return; }                 // dialog cancelled
       if (result.ok === false) { info = { key: 'infoError', arg: result.error, tone: 'bad' }; renderInfo(); return; }
       info = { key: 'infoPath', arg: result.file.path || result.file.name, tone: 'ok' };
       load(result);
@@ -775,6 +854,14 @@
     window.addEventListener('dragover', (e) => e.preventDefault());
     window.addEventListener('drop', (e) => e.preventDefault());
 
+    const scanWith = async (call) => {
+      window.exelatBusy();
+      let result;
+      try { result = await call(); } catch (error) { result = { ok: false, error: String(error) }; }
+      handleResult(result);
+    };
+    $('folderBtn').addEventListener('click', () => scanWith(() => window.pywebview.api.pick_folder()));
+    $('scanFolderBtn').addEventListener('click', () => { const folder = S.file.path.replace(/[\\/][^\\/]*$/, ''); scanWith(() => window.pywebview.api.scan(folder)); });
     $('demoBtn').addEventListener('click', () => { info = { key: null, arg: null, tone: 'idle' }; load(SAMPLE); });
     $('resetBtn').addEventListener('click', reset);
     $('langBtn').addEventListener('click', () => { lang = lang === 'en' ? 'he' : 'en'; store.set('exelat.lang', lang); applyI18n(); });
