@@ -1,30 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ExeLat — Executable Translator</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet" />
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['"Space Grotesk"', 'Heebo', 'system-ui', 'sans-serif'],
-            mono: ['"JetBrains Mono"', 'Consolas', 'monospace'],
-          },
-          colors: {
-            ink: { 950: '#070b14', 900: '#0b1120', 800: '#111a2e', 700: '#1a2640', 600: '#27365a' },
-            amber: { glow: '#f5b941' },
-            cyanx: '#4fd8e0',
-          },
-        },
-      },
-    };
-  </script>
+  <!-- Built from src/tailwind.css with: npm run css (see README). No network needed at runtime. -->
+  <link rel="stylesheet" href="assets/app.css" />
   <style>
+    html { color-scheme: dark; }
     body { background: #070b14; }
     .grid-bg {
       background-image:
@@ -32,130 +15,156 @@
         linear-gradient(90deg, rgba(79,216,224,.045) 1px, transparent 1px);
       background-size: 32px 32px;
     }
-    /* Drop zone marching border */
     .dropzone { background-image: repeating-linear-gradient(135deg, rgba(245,185,65,.05) 0 12px, transparent 12px 24px); }
     .dropzone.dragover { border-color: #f5b941; background-color: rgba(245,185,65,.08); transform: scale(1.01); }
-    /* Hex scanner */
+
     @keyframes scan { 0% { top: -25%; } 100% { top: 105%; } }
     .scanline { position: absolute; left: 0; right: 0; height: 28px; top: -25%;
       background: linear-gradient(180deg, transparent, rgba(245,185,65,.28), transparent); }
-    .scanning .scanline { animation: scan 1.4s linear infinite; }
+    .scanning .scanline { animation: scan 1.2s linear infinite; }
+
     @keyframes pulse-dot { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
+    .step .dot { background: #27365a; }
+    .step.active { border-color: rgba(245,185,65,.6); }
     .step.active .dot { animation: pulse-dot .9s ease-in-out infinite; background: #f5b941; box-shadow: 0 0 12px #f5b941; }
-    .step.done .dot { background: #4fd8e0; }
     .step.active .label { color: #f5b941; }
+    .step.done .dot { background: #4fd8e0; }
     .step.done .label { color: #cfe9ec; }
-    @keyframes flash { 0% { background: rgba(245,185,65,.55); } 100% { background: transparent; } }
-    .flash { animation: flash .7s ease-out; }
-    /* Classic Win32 look for the previewed app */
-    .win { font-family: Tahoma, 'Segoe UI', Heebo, sans-serif; font-size: 12px; color: #000; background: #ece9d8;
-      border: 1px solid #0a246a; box-shadow: 0 18px 40px rgba(0,0,0,.55); }
-    .win-title { background: linear-gradient(90deg, #0a246a, #3a6ea5 60%, #a6caf0); color: #fff; font-weight: 700; }
-    .win-btn { background: #ece9d8; border: 1px solid; border-color: #fff #404040 #404040 #fff; padding: 3px 14px; min-width: 72px; text-align: center; }
-    .win-btn.primary { outline: 1px solid #000; }
-    .win-input { background: #fff; border: 1px solid; border-color: #404040 #fff #fff #404040; padding: 2px 5px; }
-    .win-side { background: linear-gradient(180deg, #0a246a, #3a6ea5); }
-    .win * { transition: background-color .3s; }
+    .step.skipped { border-style: dashed; }
+    .step.skipped .dot { background: transparent; outline: 2px solid #7f8fae; outline-offset: -1px; }
+    .step.skipped .label { color: #9fb0cc; }
+
+    @keyframes flash { 0% { background: rgba(245,185,65,.45); } 100% { background: transparent; } }
+    .flash { animation: flash .9s ease-out; }
+
+    /* Classic Win32 look for the previewed dialog */
+    .win { font-family: Tahoma, 'Segoe UI', Arial, sans-serif; font-size: 12.5px; color: #000; background: #ece9d8;
+      border: 1px solid #0a246a; box-shadow: 0 18px 40px rgba(0,0,0,.55); transform-origin: top left; }
+    .win-title { background: linear-gradient(90deg, #0a246a, #3a6ea5 60%, #a6caf0); color: #fff; font-weight: 700;
+      display: flex; align-items: center; justify-content: space-between; padding: 3px 6px; height: 24px; white-space: nowrap; }
+    .win[dir="rtl"] .win-title { background: linear-gradient(270deg, #0a246a, #3a6ea5 60%, #a6caf0); }
+    .win-client { position: relative; overflow: hidden; }
+    .win-client > * { position: absolute; box-sizing: border-box; overflow: hidden; line-height: 1.15; }
+    /* Untranslated text keeps its own reading order even inside a mirrored dialog ("Status:" not ":Status"). */
+    .win-client > *, .win-client span { unicode-bidi: plaintext; }
+    .win-btn { background: #ece9d8; border: 1px solid; border-color: #fff #404040 #404040 #fff;
+      display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+    .win-btn.is-default { outline: 1px solid #000; }
+    .win-cap { font: 10px Marlett, 'Segoe UI Symbol', sans-serif; color: #000; width: 16px; height: 14px; }
+    .win-input { background: #fff; border: 1px solid; border-color: #404040 #fff #fff #404040; padding: 1px 4px;
+      display: flex; align-items: center; white-space: nowrap; }
+    .win-check { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+    .win-box { flex: none; width: 12px; height: 12px; background: #fff; border: 1px solid; border-color: #404040 #fff #fff #404040; }
+    .win-box.round { border-radius: 50%; }
+    .win-group { border: 1px solid #aca899; overflow: visible !important; }
+    .win-group > span { position: absolute; top: -8px; inset-inline-start: 8px; background: #ece9d8; padding: 0 3px; white-space: nowrap; }
+    .win-banner { background: linear-gradient(180deg, #0a246a, #3a6ea5); color: rgba(255,255,255,.9);
+      display: flex; align-items: center; justify-content: center; font-size: 26px; }
+    .win-hint { color: #8a8a8a; font-size: 10px; }
+    .win-line { border-top: 1px solid #aca899; border-bottom: 1px solid #fff; }
+
+    .he-input { background: transparent; width: 100%; outline: none; border-bottom: 1px solid transparent; }
+    .he-input:focus { border-bottom-color: #f5b941; }
+    .he-input::placeholder { color: #47557a; }
     @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   </style>
 </head>
 <body class="text-slate-200 font-sans min-h-screen grid-bg">
 
-  <!-- Top bar -->
   <header class="border-b border-ink-700/80 bg-ink-950/80 backdrop-blur sticky top-0 z-20">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-md border border-amber-glow/70 grid place-items-center font-mono text-amber-glow text-sm font-bold">⇄</div>
-        <div class="font-bold tracking-tight text-lg">Exe<span class="text-amber-glow">Lat</span></div>
-        <span class="hidden sm:inline font-mono text-[11px] text-slate-500 border border-ink-600 rounded px-1.5 py-0.5">PoC · UI mockup</span>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-8 h-8 shrink-0 rounded-md border border-amber-glow/70 grid place-items-center font-mono text-amber-glow text-sm font-bold">⇄</div>
+        <div class="font-bold tracking-tight text-lg" dir="ltr">Exe<span class="text-amber-glow">Lat</span></div>
+        <span id="versionBadge" class="hidden sm:inline font-mono text-[11px] text-slate-500 border border-ink-600 rounded px-1.5 py-0.5" dir="ltr">PoC</span>
+        <span id="modeBadge" class="font-mono text-[11px] rounded px-1.5 py-0.5 border border-ink-600 text-slate-400 truncate"></span>
       </div>
-      <div class="flex items-center gap-4 font-mono text-xs text-slate-400">
-        <span class="hidden md:inline">RU <span class="text-amber-glow">→</span> HE</span>
-        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-cyanx"></span>engine idle</span>
+      <div class="flex items-center gap-3 font-mono text-xs text-slate-400">
+        <span class="hidden md:inline" dir="ltr">LTR <span class="text-amber-glow">→</span> RTL</span>
+        <button id="langBtn" class="rounded-md border border-ink-600 px-2.5 py-1 text-slate-200 hover:border-amber-glow/70 transition font-sans"></button>
       </div>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-7 space-y-6">
 
     <section class="max-w-3xl">
-      <h1 class="text-3xl sm:text-4xl font-bold tracking-tight leading-tight">Translate compiled Windows apps <span class="text-amber-glow">right&#8209;to&#8209;left</span>.</h1>
-      <p class="mt-3 text-slate-400">Drop a Win32 executable. ExeLat unpacks its resources, translates every string with an LLM, mirrors the dialog layout for Hebrew, and repacks the binary.</p>
+      <h1 class="text-3xl sm:text-4xl font-bold tracking-tight leading-tight" data-i18n="heroTitle"></h1>
+      <p class="mt-3 text-slate-400" data-i18n="heroBody"></p>
     </section>
 
     <div class="grid lg:grid-cols-5 gap-6">
 
-      <!-- Drop zone -->
+      <!-- Input -->
       <section class="lg:col-span-2 space-y-4">
-        <div id="dropzone" tabindex="0" role="button" aria-label="Drop an .exe file or press Enter to browse"
-             class="dropzone relative rounded-xl border-2 border-dashed border-ink-600 bg-ink-900/70 p-8 text-center cursor-pointer transition duration-200 hover:border-amber-glow/70 focus:outline-none focus:border-amber-glow">
-          <input id="fileInput" type="file" accept=".exe,.dll,.msi" class="hidden" />
-          <div class="mx-auto w-14 h-14 rounded-lg bg-ink-800 border border-ink-600 grid place-items-center font-mono text-amber-glow font-bold">.exe</div>
-          <p class="mt-4 font-semibold text-lg">Drag &amp; drop an executable</p>
-          <p class="text-sm text-slate-400">or <span class="text-amber-glow underline underline-offset-4">browse files</span> — .exe, .dll, .msi</p>
-          <p id="fileInfo" class="mt-4 font-mono text-xs text-slate-500">No file selected. Files never leave this page in the mockup.</p>
+        <div id="dropzone" tabindex="0" role="button"
+             class="dropzone relative rounded-xl border-2 border-dashed border-ink-600 bg-ink-900/70 p-7 text-center cursor-pointer transition duration-200 hover:border-amber-glow/70 focus:outline-none focus:border-amber-glow">
+          <input id="fileInput" type="file" accept=".exe,.dll,.mui,.ocx,.cpl,.scr" class="hidden" />
+          <div class="mx-auto w-14 h-14 rounded-lg bg-ink-800 border border-ink-600 grid place-items-center font-mono text-amber-glow font-bold" dir="ltr">.exe</div>
+          <p class="mt-4 font-semibold text-lg" data-i18n="dropTitle"></p>
+          <p class="text-sm text-slate-400"><span data-i18n="dropOr"></span> <span class="text-amber-glow underline underline-offset-4" data-i18n="dropBrowse"></span> <span dir="ltr">— .exe, .dll, .mui</span></p>
+          <p id="fileInfo" class="mt-4 text-xs text-slate-500"></p>
         </div>
 
         <div class="flex gap-3">
-          <button id="demoBtn" class="flex-1 rounded-lg bg-amber-glow text-ink-950 font-semibold py-2.5 hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">Run demo translation</button>
-          <button id="resetBtn" class="rounded-lg border border-ink-600 px-4 py-2.5 text-slate-300 hover:border-slate-400 transition">Reset</button>
+          <button id="demoBtn" class="flex-1 rounded-lg bg-amber-glow text-ink-950 font-semibold py-2.5 hover:brightness-110 transition" data-i18n="runDemo"></button>
+          <button id="resetBtn" class="rounded-lg border border-ink-600 px-4 py-2.5 text-slate-300 hover:border-slate-400 transition" data-i18n="reset"></button>
         </div>
 
-        <div class="grid grid-cols-2 gap-3 font-mono text-xs">
-          <label class="rounded-lg bg-ink-900/70 border border-ink-700 p-3">
-            <span class="text-slate-500 block mb-1">source</span>
-            <select class="bg-transparent w-full text-slate-200 focus:outline-none"><option class="bg-ink-900">Russian (LTR)</option><option class="bg-ink-900">English (LTR)</option></select>
-          </label>
-          <label class="rounded-lg bg-ink-900/70 border border-ink-700 p-3">
-            <span class="text-slate-500 block mb-1">target</span>
-            <select class="bg-transparent w-full text-slate-200 focus:outline-none"><option class="bg-ink-900">Hebrew (RTL)</option></select>
-          </label>
+        <div class="rounded-lg bg-ink-900/70 border border-ink-700 p-4 text-sm text-slate-400 space-y-2">
+          <p class="font-semibold text-slate-200" data-i18n="howTitle"></p>
+          <p data-i18n="howBody"></p>
         </div>
       </section>
 
-      <!-- Pipeline / processing -->
-      <section class="lg:col-span-3 rounded-xl bg-ink-900/70 border border-ink-700 p-5">
-        <div class="flex items-center justify-between">
-          <h2 class="font-semibold">Pipeline</h2>
-          <span id="statusText" class="font-mono text-xs text-slate-400">waiting for input</span>
+      <!-- Analysis -->
+      <section class="lg:col-span-3 rounded-xl bg-ink-900/70 border border-ink-700 p-5 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="min-w-0">
+            <h2 id="fileName" class="font-semibold truncate" dir="auto"></h2>
+            <p id="fileMeta" class="font-mono text-xs text-slate-500" dir="ltr"></p>
+          </div>
+          <span id="statusText" class="text-xs text-slate-400"></span>
         </div>
 
-        <ol id="steps" class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <li class="step rounded-lg border border-ink-700 bg-ink-800/60 p-3" data-msg="parsing PE headers, locating .rsrc">
-            <div class="flex items-center gap-2"><span class="dot w-2 h-2 rounded-full bg-ink-600"></span><span class="label font-semibold text-sm text-slate-400">Unpack</span></div>
-            <p class="mt-1 text-xs text-slate-500">PE headers, .rsrc tree</p>
-          </li>
-          <li class="step rounded-lg border border-ink-700 bg-ink-800/60 p-3" data-msg="translating string table via LLM">
-            <div class="flex items-center gap-2"><span class="dot w-2 h-2 rounded-full bg-ink-600"></span><span class="label font-semibold text-sm text-slate-400">AI Translate</span></div>
-            <p class="mt-1 text-xs text-slate-500">strings, menus, dialogs</p>
-          </li>
-          <li class="step rounded-lg border border-ink-700 bg-ink-800/60 p-3" data-msg="mirroring dialog templates, WS_EX_LAYOUTRTL">
-            <div class="flex items-center gap-2"><span class="dot w-2 h-2 rounded-full bg-ink-600"></span><span class="label font-semibold text-sm text-slate-400">UI RTL Fix</span></div>
-            <p class="mt-1 text-xs text-slate-500">mirror layout, RTL styles</p>
-          </li>
-          <li class="step rounded-lg border border-ink-700 bg-ink-800/60 p-3" data-msg="rebuilding .rsrc, fixing checksum">
-            <div class="flex items-center gap-2"><span class="dot w-2 h-2 rounded-full bg-ink-600"></span><span class="label font-semibold text-sm text-slate-400">Repack</span></div>
-            <p class="mt-1 text-xs text-slate-500">new .rsrc, checksum</p>
-          </li>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="rounded-lg bg-ink-800/60 border border-ink-700 p-3"><div id="statSections" class="text-2xl font-bold font-mono">–</div><div class="text-xs text-slate-500" data-i18n="statSections"></div></div>
+          <div class="rounded-lg bg-ink-800/60 border border-ink-700 p-3"><div id="statStrings" class="text-2xl font-bold font-mono">–</div><div class="text-xs text-slate-500" data-i18n="statStrings"></div></div>
+          <div class="rounded-lg bg-ink-800/60 border border-ink-700 p-3"><div id="statDialogs" class="text-2xl font-bold font-mono">–</div><div class="text-xs text-slate-500" data-i18n="statDialogs"></div></div>
+          <div class="rounded-lg bg-ink-800/60 border border-ink-700 p-3"><div id="statTranslated" class="text-2xl font-bold font-mono text-amber-glow">–</div><div class="text-xs text-slate-500" data-i18n="statTranslated"></div></div>
+        </div>
+
+        <ol id="steps" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <li class="step rounded-lg border border-ink-700 bg-ink-800/60 p-3"><div class="flex items-center gap-2"><span class="dot w-2 h-2 rounded-full"></span><span class="label font-semibold text-sm text-slate-400" data-i18n="step1"></span></div><p class="mt-1 text-xs text-slate-500" data-i18n="step1d"></p></li>
+          <li class="step rounded-lg border border-ink-700 bg-ink-800/60 p-3"><div class="flex items-center gap-2"><span class="dot w-2 h-2 rounded-full"></span><span class="label font-semibold text-sm text-slate-400" data-i18n="step2"></span></div><p class="mt-1 text-xs text-slate-500" data-i18n="step2d"></p></li>
+          <li class="step rounded-lg border border-ink-700 bg-ink-800/60 p-3"><div class="flex items-center gap-2"><span class="dot w-2 h-2 rounded-full"></span><span class="label font-semibold text-sm text-slate-400" data-i18n="step3"></span></div><p class="mt-1 text-xs text-slate-500" data-i18n="step3d"></p></li>
+          <li class="step rounded-lg border border-ink-700 bg-ink-800/60 p-3"><div class="flex items-center gap-2"><span class="dot w-2 h-2 rounded-full"></span><span class="label font-semibold text-sm text-slate-400" data-i18n="step4"></span></div><p class="mt-1 text-xs text-slate-500" data-i18n="step4d"></p></li>
         </ol>
 
-        <div class="mt-4 h-1.5 rounded-full bg-ink-800 overflow-hidden">
+        <div class="h-1.5 rounded-full bg-ink-800 overflow-hidden" dir="ltr">
           <div id="progress" class="h-full w-0 bg-gradient-to-r from-amber-glow to-cyanx transition-all duration-500"></div>
         </div>
 
-        <!-- Hex scanner + string table -->
-        <div class="mt-4 grid md:grid-cols-2 gap-4">
-          <div id="hexBox" class="relative overflow-hidden rounded-lg bg-ink-950 border border-ink-700 p-3 font-mono text-[11px] leading-5 text-slate-500 h-44">
+        <div class="grid md:grid-cols-2 gap-4">
+          <div id="hexBox" dir="ltr" class="relative overflow-hidden rounded-lg bg-ink-950 border border-ink-700 p-3 font-mono text-[11px] leading-5 text-slate-500 h-36">
             <div class="scanline"></div>
             <pre id="hex" class="whitespace-pre overflow-hidden"></pre>
           </div>
-          <div class="rounded-lg bg-ink-950 border border-ink-700 h-44 overflow-auto">
-            <table class="w-full text-xs">
-              <thead class="sticky top-0 bg-ink-950 font-mono text-slate-500 text-left">
-                <tr><th class="px-3 py-2 font-normal">ID</th><th class="px-3 py-2 font-normal">source</th><th class="px-3 py-2 font-normal text-right">עברית</th></tr>
-              </thead>
-              <tbody id="stringTable" class="divide-y divide-ink-800"></tbody>
-            </table>
+          <div class="rounded-lg bg-ink-950 border border-ink-700 p-3 h-36 overflow-auto text-xs">
+            <p class="text-slate-500 mb-2" data-i18n="sectionsTitle"></p>
+            <div id="sections" class="font-mono space-y-1" dir="ltr"></div>
+            <p id="notes" class="mt-2 text-amber-glow/90"></p>
+          </div>
+        </div>
+
+        <!-- Build -->
+        <div class="rounded-lg bg-ink-950 border border-ink-700 p-4 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm">
+          <label class="flex items-center gap-2 cursor-pointer"><input id="optDialogs" type="checkbox" checked class="accent-[#f5b941] w-4 h-4" /><span data-i18n="optDialogs"></span></label>
+          <label class="flex items-center gap-2 cursor-pointer"><input id="optWindows" type="checkbox" checked class="accent-[#f5b941] w-4 h-4" /><span data-i18n="optWindows"></span></label>
+          <button id="buildBtn" class="ms-auto rounded-lg bg-amber-glow text-ink-950 font-semibold px-4 py-2 hover:brightness-110 transition disabled:opacity-30 disabled:pointer-events-none"></button>
+          <div id="buildResult" class="basis-full text-xs hidden">
+            <p id="buildText"></p>
+            <button id="revealBtn" class="mt-2 underline underline-offset-4 text-amber-glow hidden" data-i18n="reveal"></button>
           </div>
         </div>
       </section>
@@ -163,197 +172,637 @@
 
     <!-- Live preview -->
     <section class="rounded-xl bg-ink-900/70 border border-ink-700 p-5">
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <h2 class="font-semibold">Live Preview</h2>
-        <p class="font-mono text-xs text-slate-500">simulated render of dialog resource <span class="text-slate-300">IDD_WELCOME (101)</span></p>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="font-semibold" data-i18n="previewTitle"></h2>
+        <div class="flex items-center gap-2 text-xs">
+          <button id="prevDlg" class="rounded border border-ink-600 w-7 h-7 hover:border-slate-400 disabled:opacity-30" aria-label="Previous dialog">‹</button>
+          <select id="dlgSelect" class="bg-ink-800 border border-ink-600 rounded px-2 py-1.5 max-w-[320px] text-slate-200 focus:outline-none focus:border-amber-glow" dir="auto"></select>
+          <button id="nextDlg" class="rounded border border-ink-600 w-7 h-7 hover:border-slate-400 disabled:opacity-30" aria-label="Next dialog">›</button>
+        </div>
       </div>
 
-      <div class="mt-5 grid xl:grid-cols-2 gap-8 items-start">
-        <figure>
-          <figcaption class="mb-3 flex items-center gap-2 font-mono text-xs"><span class="px-2 py-0.5 rounded bg-ink-800 border border-ink-600 text-slate-300">ORIGINAL</span><span class="text-slate-500">Russian · LTR</span></figcaption>
-          <div id="winSource" class="overflow-x-auto"></div>
+      <div id="previewEmpty" class="mt-5 rounded-lg border border-dashed border-ink-600 p-8 text-center text-sm text-slate-500"></div>
+      <div id="previewGrid" class="mt-5 grid xl:grid-cols-2 gap-8 items-start hidden">
+        <figure class="min-w-0">
+          <figcaption class="mb-3 flex items-center gap-2 text-xs"><span class="px-2 py-0.5 rounded bg-ink-800 border border-ink-600 text-slate-300 font-mono" data-i18n="original"></span><span class="text-slate-500" data-i18n="originalCap"></span></figcaption>
+          <div id="winSource" dir="ltr"></div>
         </figure>
-        <figure>
-          <figcaption class="mb-3 flex items-center gap-2 font-mono text-xs"><span id="outBadge" class="px-2 py-0.5 rounded bg-ink-800 border border-ink-600 text-slate-300">OUTPUT</span><span id="outCaption" class="text-slate-500">waiting — mirrors the original until translated</span></figcaption>
-          <div id="winTarget" class="overflow-x-auto"></div>
+        <figure class="min-w-0">
+          <figcaption class="mb-3 flex items-center gap-2 text-xs"><span id="outBadge" class="px-2 py-0.5 rounded font-mono"></span><span id="outCaption" class="text-slate-500"></span></figcaption>
+          <div id="winTarget" dir="ltr"></div>
         </figure>
       </div>
     </section>
 
-    <footer class="pb-8 font-mono text-xs text-slate-600">ExeLat PoC — static mockup. No binary is parsed or uploaded; the pipeline above is simulated in the browser.</footer>
-  </main>
-
-  <!-- One dialog template, rendered twice -->
-  <template id="winTpl">
-    <div class="win w-[470px] select-none" dir="ltr">
-      <div class="win-title flex items-center justify-between px-2 py-1">
-        <span data-k="title"></span>
-        <span class="flex gap-0.5 font-mono text-[10px] text-black" dir="ltr">
-          <span class="win-btn !min-w-0 !px-1.5 !py-0">_</span><span class="win-btn !min-w-0 !px-1.5 !py-0">□</span><span class="win-btn !min-w-0 !px-1.5 !py-0">✕</span>
-        </span>
-      </div>
-      <div class="flex">
-        <div class="win-side w-28 shrink-0 grid place-items-center text-white/90 text-3xl">▣</div>
-        <div class="p-4 flex-1 bg-white min-h-[190px]">
-          <p class="font-bold text-[14px]" data-k="heading"></p>
-          <p class="mt-2 leading-snug" data-k="body"></p>
-          <p class="mt-4" data-k="folderLabel"></p>
-          <div class="mt-1 flex gap-2">
-            <span class="win-input flex-1 font-mono text-[11px]" dir="ltr">C:\Program Files\FotoMaster</span>
-            <span class="win-btn !min-w-0" data-k="browse"></span>
-          </div>
-          <p class="mt-3 flex items-center gap-1.5"><span class="win-input !p-0 w-3 h-3 grid place-items-center text-[9px] leading-none">✓</span><span data-k="shortcut"></span></p>
+    <!-- Strings -->
+    <section class="rounded-xl bg-ink-900/70 border border-ink-700 p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="font-semibold"><span data-i18n="stringsTitle"></span> <span id="rowCount" class="font-mono text-xs text-slate-500 font-normal"></span></h2>
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+          <select id="provider" class="bg-ink-800 border border-ink-600 rounded px-2 py-1.5 text-slate-200 focus:outline-none focus:border-amber-glow">
+            <option value="cli" data-i18n="provCli"></option>
+            <option value="api" data-i18n="provApi"></option>
+          </select>
+          <input id="apiKey" type="password" autocomplete="off" spellcheck="false" dir="ltr" class="hidden bg-ink-800 border border-ink-600 rounded px-2.5 py-1.5 w-44 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-amber-glow" data-i18n-ph="keyPh" />
+          <button id="aiBtn" class="rounded bg-cyanx text-ink-950 font-semibold px-3 py-1.5 hover:brightness-110 transition disabled:opacity-30 disabled:pointer-events-none"></button>
+          <span class="w-px h-5 bg-ink-600 mx-1"></span>
+          <input id="search" type="search" class="bg-ink-800 border border-ink-600 rounded px-2.5 py-1.5 w-48 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-amber-glow" data-i18n-ph="searchPh" />
+          <select id="filter" class="bg-ink-800 border border-ink-600 rounded px-2 py-1.5 text-slate-200 focus:outline-none focus:border-amber-glow">
+            <option value="all" data-i18n="filterAll"></option>
+            <option value="done" data-i18n="filterDone"></option>
+            <option value="todo" data-i18n="filterTodo"></option>
+          </select>
+          <button id="exportBtn" class="rounded border border-amber-glow/70 text-amber-glow px-3 py-1.5 hover:bg-amber-glow hover:text-ink-950 transition disabled:opacity-30 disabled:pointer-events-none" data-i18n="export"></button>
         </div>
       </div>
-      <div class="flex justify-end gap-2 px-3 py-2.5 border-t border-white" style="box-shadow: inset 0 1px 0 #aca899;">
-        <span class="win-btn" data-k="back"></span>
-        <span class="win-btn primary" data-k="next"></span>
-        <span class="win-btn ms-2" data-k="cancel"></span>
+      <p id="aiNote" class="mt-3 text-xs text-slate-400 hidden"></p>
+      <div class="mt-4 rounded-lg bg-ink-950 border border-ink-700 max-h-[420px] overflow-auto">
+        <table class="w-full text-sm table-fixed">
+          <thead class="sticky top-0 bg-ink-950 text-slate-500 text-xs">
+            <tr>
+              <th class="px-3 py-2 font-normal text-start w-28" data-i18n="colWhere"></th>
+              <th class="px-3 py-2 font-normal text-start" data-i18n="colSource"></th>
+              <th class="px-3 py-2 font-normal text-start" data-i18n="colHebrew"></th>
+              <th class="px-3 py-2 font-normal text-start w-28" data-i18n="colStatus"></th>
+            </tr>
+          </thead>
+          <tbody id="stringTable" class="divide-y divide-ink-800"></tbody>
+        </table>
+        <p id="tableNote" class="px-3 py-3 text-xs text-slate-500"></p>
       </div>
-    </div>
-  </template>
+    </section>
+
+    <footer class="pb-6 text-xs text-slate-600" data-i18n="footer"></footer>
+  </main>
 
   <script>
-    // String resources of the fictional installer: [id, key, Russian, Hebrew]
-    const STRINGS = [
-      [101, 'title',       'Установка — ФотоМастер 2.4',                'התקנה — פוטומאסטר 2.4'],
-      [102, 'heading',     'Вас приветствует мастер установки',         'ברוכים הבאים לאשף ההתקנה'],
-      [103, 'body',        'Программа установит ФотоМастер на ваш компьютер. Рекомендуется закрыть все прочие приложения перед продолжением.',
-                           'התוכנית תתקין את פוטומאסטר במחשב שלך. מומלץ לסגור את כל היישומים האחרים לפני שממשיכים.'],
-      [104, 'folderLabel', 'Папка установки:',                          'תיקיית התקנה:'],
-      [105, 'browse',      'Обзор...',                                  'עיון...'],
-      [106, 'shortcut',    'Создать ярлык на рабочем столе',            'צור קיצור דרך בשולחן העבודה'],
-      [107, 'back',        'Назад',                                     'הקודם'],
-      [108, 'next',        'Далее',                                     'הבא'],
-      [109, 'cancel',      'Отмена',                                    'ביטול'],
-    ];
+    // ------------------------------------------------------------------ i18n
+    const TEXT = {
+      en: {
+        langBtn: 'עברית', modeDesktop: 'Desktop app', modeBrowser: 'Browser demo · sample data',
+        heroTitle: 'Translate compiled Windows apps right-to-left.',
+        heroBody: 'Open a Win32 program. ExeLat reads its menus, dialogs and string tables, translates them to Hebrew, mirrors the layout, and writes a translated copy of the .exe.',
+        optDialogs: 'Mirror dialogs', optWindows: 'Mirror main windows',
+        build: 'Build translated EXE', buildBusy: 'Building…', reveal: 'Show in folder',
+        buildDone: (r) => `Saved ${r.output} — ${r.strings} strings, ${r.menuItems} menu items, ${r.controls} dialog texts; ${r.dialogsMirrored} dialogs mirrored${r.processMirrored ? ', main windows mirrored' : ''}.`,
+        buildSig: 'The original digital signature was removed (it cannot be valid for a changed file); Windows may show a warning until you sign the new file.',
+        buildAppended: 'Appended data was carried over. Installers and self-checking programs may still refuse to run.',
+        buildSkipped: (n) => `${n} resource(s) had an unusual format and were left untouched.`,
+        buildError: (e) => `Build failed: ${e}`,
+        buildHint: 'Keep the new file in the same folder as the original so it finds its DLLs.',
+        desktopOnly: 'Available in the desktop app',
+        provCli: 'Claude Code (this PC)', provApi: 'Anthropic API key', keyPh: 'sk-ant-… (not saved)',
+        aiBtn: (n) => `Translate ${n} missing with AI`, aiBusy: (a, b) => `Translating… ${a}/${b}`,
+        aiDone: (n, rej) => `AI translated ${n} texts.` + (rej ? ` ${rej} answers were rejected (changed placeholders or shortcuts) and left for you.` : ''),
+        aiError: (e, n) => `AI translation stopped: ${e}` + (n ? ` (${n} texts were translated before that.)` : ''),
+        aiNoCli: 'Claude Code was not found on this PC. Choose "Anthropic API key" instead.',
+        stAi: 'AI', stBuilt: (n) => `built ${n}`,
+        noteAppended: 'This file has data appended after the program (typical for installers). It is carried over, but such files often verify themselves.',
+        dropTitle: 'Drag & drop an executable', dropOr: 'or', dropBrowse: 'choose a file',
+        infoIdleDesktop: 'The file is read locally. Nothing is uploaded.',
+        infoIdleBrowser: 'In the browser this page shows sample data. Use the desktop app to analyse real files.',
+        infoBrowserFile: (n) => `"${n}" cannot be parsed in the browser — showing sample data instead.`,
+        infoBadType: (n) => `"${n}" is not a Windows executable.`,
+        infoError: (e) => `Could not read the file: ${e}`,
+        runDemo: 'Load sample installer', reset: 'Reset',
+        howTitle: 'What happens to the file',
+        howBody: 'The original is never changed. Standard terms are translated offline from a built-in glossary; the rest can be translated by AI or typed by hand. Only text stored in the program\'s resources can be translated — text built in code, and frameworks like .NET, Qt or Delphi forms, are out of reach.',
+        noFile: 'No file loaded', statusIdle: 'waiting for a file',
+        statSections: 'sections', statStrings: 'texts found', statDialogs: 'dialogs', statTranslated: 'translated',
+        step1: 'Unpack', step1d: 'menus, dialogs, strings', step2: 'Translate', step2d: 'glossary, then AI / you',
+        step3: 'UI RTL Fix', step3d: 'mirror every dialog', step4: 'Repack', step4d: 'write the new .exe',
+        st1: 'reading PE headers and resources…', st2: 'matching texts against the glossary…', st3: 'mirroring dialog layouts…',
+        stDone: (a, b) => `done — ${a} of ${b} texts translated`,
+        sectionsTitle: 'Sections (virtual / raw size)',
+        noteSigned: 'This file is signed. A repacked copy would need to be signed again.',
+        noteEmpty: 'No string tables or dialogs in this file. Windows programs often keep them in a .mui file next to the exe, e.g. en-US\\app.exe.mui — try that file.',
+        noteUnparsed: (n) => `${n} dialog(s) could not be parsed and are not shown.`,
+        previewTitle: 'Live Preview', previewEmptyIdle: 'Load a file to see its dialogs side by side.',
+        previewEmptyNone: 'This file has no dialog templates to preview.',
+        original: 'ORIGINAL', originalCap: 'as stored in the file',
+        outWaiting: 'OUTPUT', outWaitingCap: 'waiting', outTranslated: 'TRANSLATED', outTranslatedCap: 'texts replaced, layout not yet mirrored',
+        outMirrored: 'HEBREW · RTL', outMirroredCap: 'texts replaced, layout mirrored',
+        controls: 'controls',
+        stringsTitle: 'Texts', searchPh: 'Search…', filterAll: 'All', filterDone: 'Translated', filterTodo: 'Missing',
+        export: 'Export plan (JSON)', colWhere: 'Where', colSource: 'Source', colHebrew: 'Hebrew', colStatus: 'Status',
+        hePh: 'type a translation…', stGlossary: 'glossary', stManual: 'edited', stSample: 'sample', stTodo: 'missing',
+        tableIdle: 'Nothing loaded yet.', tableNoMatch: 'No texts match.',
+        tableMore: (a, b) => `Showing ${a} of ${b}. Search to narrow the list.`,
+        exported: (p) => `plan saved: ${p}`,
+        footer: 'ExeLat. Files are read and written on your machine. AI translation sends only the texts being translated to Claude. Use it on software you are allowed to modify.',
+      },
+      he: {
+        langBtn: 'English', modeDesktop: 'אפליקציית שולחן עבודה', modeBrowser: 'הדגמה בדפדפן · נתוני דוגמה',
+        heroTitle: 'תרגום תוכנות Windows מקומפלות מימין לשמאל.',
+        heroBody: 'פתחו תוכנת Win32. ‏ExeLat קורא את התפריטים, הדיאלוגים וטבלאות המחרוזות, מתרגם אותם לעברית, הופך את הפריסה לימין‑לשמאל, וכותב עותק מתורגם של קובץ ה‑exe.',
+        optDialogs: 'היפוך דיאלוגים', optWindows: 'היפוך חלונות ראשיים',
+        build: 'בנה EXE מתורגם', buildBusy: 'בונה…', reveal: 'הצג בתיקייה',
+        buildDone: (r) => `נשמר ${r.output} — ${r.strings} מחרוזות, ${r.menuItems} פריטי תפריט, ${r.controls} טקסטים בדיאלוגים; ${r.dialogsMirrored} דיאלוגים הופכו${r.processMirrored ? ', החלונות הראשיים הופכו' : ''}.`,
+        buildSig: 'החתימה הדיגיטלית המקורית הוסרה (היא לא יכולה להיות תקפה לקובץ ששונה); Windows עשוי להציג אזהרה עד שתחתמו על הקובץ החדש.',
+        buildAppended: 'הנתונים שצורפו לסוף הקובץ הועברו. תוכנות התקנה ותוכנות שבודקות את עצמן עדיין עלולות לסרב לרוץ.',
+        buildSkipped: (n) => `${n} משאבים בפורמט חריג נשארו ללא שינוי.`,
+        buildError: (e) => `הבנייה נכשלה: ${e}`,
+        buildHint: 'השאירו את הקובץ החדש באותה תיקייה כמו המקורי כדי שימצא את קובצי ה‑DLL שלו.',
+        desktopOnly: 'זמין באפליקציית שולחן העבודה',
+        provCli: 'Claude Code (במחשב הזה)', provApi: 'מפתח API של Anthropic', keyPh: 'sk-ant-… (לא נשמר)',
+        aiBtn: (n) => `תרגם ${n} חסרים עם AI`, aiBusy: (a, b) => `מתרגם… ${a}/${b}`,
+        aiDone: (n, rej) => `ה‑AI תרגם ${n} טקסטים.` + (rej ? ` ${rej} תשובות נדחו (שינו מצייני מקום או קיצורי מקשים) ונשארו לכם.` : ''),
+        aiError: (e, n) => `תרגום ה‑AI נעצר: ${e}` + (n ? ` (${n} טקסטים תורגמו לפני כן.)` : ''),
+        aiNoCli: 'Claude Code לא נמצא במחשב הזה. בחרו "מפתח API של Anthropic".',
+        stAi: 'AI', stBuilt: (n) => `נבנה ${n}`,
+        noteAppended: 'לקובץ מצורפים נתונים אחרי התוכנה (אופייני לתוכנות התקנה). הם מועברים הלאה, אבל קבצים כאלה לעיתים בודקים את עצמם.',
+        dropTitle: 'גררו לכאן קובץ הרצה', dropOr: 'או', dropBrowse: 'בחרו קובץ',
+        infoIdleDesktop: 'הקובץ נקרא מקומית. שום דבר לא מועלה לרשת.',
+        infoIdleBrowser: 'בדפדפן העמוד מציג נתוני דוגמה. כדי לנתח קבצים אמיתיים השתמשו באפליקציית שולחן העבודה.',
+        infoBrowserFile: (n) => `אי אפשר לפענח את "${n}" בדפדפן — מוצגים נתוני דוגמה.`,
+        infoBadType: (n) => `"${n}" אינו קובץ הרצה של Windows.`,
+        infoError: (e) => `לא ניתן לקרוא את הקובץ: ${e}`,
+        runDemo: 'טען התקנה לדוגמה', reset: 'איפוס',
+        howTitle: 'מה קורה לקובץ',
+        howBody: 'הקובץ המקורי לא משתנה לעולם. מונחים נפוצים מתורגמים ללא רשת ממילון מובנה; את השאר אפשר לתרגם עם AI או להקליד ידנית. ניתן לתרגם רק טקסט שנשמר במשאבי התוכנה — טקסט שנבנה בקוד, ותשתיות כמו ‎.NET‎, ‏Qt או טפסי Delphi, אינם נגישים.',
+        noFile: 'לא נטען קובץ', statusIdle: 'ממתין לקובץ',
+        statSections: 'מקטעים', statStrings: 'טקסטים שנמצאו', statDialogs: 'דיאלוגים', statTranslated: 'תורגמו',
+        step1: 'פירוק', step1d: 'תפריטים, דיאלוגים, מחרוזות', step2: 'תרגום', step2d: 'מילון, ואז AI / אתם',
+        step3: 'תיקון RTL', step3d: 'היפוך כל דיאלוג', step4: 'אריזה מחדש', step4d: 'כתיבת ה‑exe החדש',
+        st1: 'קורא כותרות PE ומשאבים…', st2: 'משווה טקסטים למילון…', st3: 'הופך את פריסת הדיאלוגים…',
+        stDone: (a, b) => `הסתיים — ${a} מתוך ${b} טקסטים תורגמו`,
+        sectionsTitle: 'מקטעים (גודל וירטואלי / גולמי)',
+        noteSigned: 'הקובץ חתום דיגיטלית. עותק ארוז מחדש יצטרך חתימה חדשה.',
+        noteEmpty: 'אין בקובץ טבלאות מחרוזות או דיאלוגים. תוכנות Windows שומרות אותם לעיתים בקובץ ‎.mui‎ לצד ה‑exe, למשל en-US\\app.exe.mui — נסו את הקובץ הזה.',
+        noteUnparsed: (n) => `${n} דיאלוגים לא פוענחו ואינם מוצגים.`,
+        previewTitle: 'תצוגה חיה', previewEmptyIdle: 'טענו קובץ כדי לראות את הדיאלוגים שלו זה לצד זה.',
+        previewEmptyNone: 'אין בקובץ תבניות דיאלוג להצגה.',
+        original: 'מקור', originalCap: 'כפי שנשמר בקובץ',
+        outWaiting: 'פלט', outWaitingCap: 'ממתין', outTranslated: 'מתורגם', outTranslatedCap: 'הטקסטים הוחלפו, הפריסה עוד לא הופכה',
+        outMirrored: 'עברית · RTL', outMirroredCap: 'הטקסטים הוחלפו, הפריסה הופכה',
+        controls: 'פקדים',
+        stringsTitle: 'טקסטים', searchPh: 'חיפוש…', filterAll: 'הכל', filterDone: 'מתורגמים', filterTodo: 'חסרים',
+        export: 'ייצוא תוכנית (JSON)', colWhere: 'מיקום', colSource: 'מקור', colHebrew: 'עברית', colStatus: 'מצב',
+        hePh: 'הקלידו תרגום…', stGlossary: 'מילון', stManual: 'נערך', stSample: 'דוגמה', stTodo: 'חסר',
+        tableIdle: 'עדיין לא נטען דבר.', tableNoMatch: 'אין טקסטים תואמים.',
+        tableMore: (a, b) => `מוצגים ${a} מתוך ${b}. חפשו כדי לצמצם את הרשימה.`,
+        exported: (p) => `התוכנית נשמרה: ${p}`,
+        footer: 'ExeLat. הקבצים נקראים ונכתבים במחשב שלכם. תרגום ה‑AI שולח ל‑Claude רק את הטקסטים המתורגמים. השתמשו רק בתוכנות שמותר לכם לשנות.',
+      },
+    };
 
+    // -------------------------------------------------------- sample analysis
+    // Same shape as main.analyze() returns, so one code path renders both.
+    const C = (kind, x, y, cx, cy, text = '', extra = {}) => ({ kind, x, y, cx, cy, text, visible: true, class: kind, id: 0, ...extra });
+    const SAMPLE = {
+      sample: true,
+      file: { name: 'FotoMaster_Setup.exe', size: 4404019, machine: 'x86', signed: false,
+        head: '4d5a90000300000004000000ffff0000b800000000000000400000000000000000000000000000000000000000000000000000000000000000000000d80000000e1fba0e00b409cd21b8014ccd21546869732070726f6772616d2063616e6e6f742062652072756e20696e20444f53206d6f64652e0d0d0a2400000000000000504500004c010500' },
+      sections: [['.text', 0x1a400, 0x1a400], ['.rdata', 0x6200, 0x6200], ['.data', 0x2c00, 0x1000], ['.rsrc', 0x9e00, 0x9e00], ['.reloc', 0x1800, 0x1800]]
+        .map(([name, virtualSize, rawSize]) => ({ name, virtualSize, rawSize })),
+      strings: [
+        { id: 201, lang: 0x419, source: 'Установка завершена' },
+        { id: 202, lang: 0x419, source: 'Недостаточно места на диске' },
+        { id: 203, lang: 0x419, source: 'Файл %s не найден' },
+      ],
+      dialogs: [
+        { name: '101', lang: 0x419, title: 'Установка — ФотоМастер 2.4', cx: 280, cy: 150, items: [
+          C('image', 0, 0, 70, 121),
+          C('text', 80, 8, 192, 12, 'Вас приветствует мастер установки', { bold: true }),
+          C('text', 80, 26, 192, 34, 'Программа установит ФотоМастер на ваш компьютер. Рекомендуется закрыть все прочие приложения перед продолжением.'),
+          C('text', 80, 68, 120, 9, 'Папка установки:'),
+          C('edit', 80, 79, 138, 13, 'C:\\Program Files\\FotoMaster'),
+          C('button', 224, 78, 48, 14, 'Обзор...'),
+          C('checkbox', 80, 100, 192, 10, 'Создать ярлык на рабочем столе'),
+          C('frame', 0, 121, 280, 1),
+          C('button', 116, 129, 50, 14, '< Назад'),
+          C('default-button', 168, 129, 50, 14, 'Далее >'),
+          C('button', 224, 129, 50, 14, 'Отмена'),
+        ] },
+        { name: '102', lang: 0x419, title: 'Выход из установки', cx: 200, cy: 62, items: [
+          C('image', 10, 10, 20, 20),
+          C('text', 40, 10, 150, 24, 'Вы действительно хотите прервать установку?'),
+          C('default-button', 46, 40, 50, 14, 'Да'),
+          C('button', 104, 40, 50, 14, 'Нет'),
+        ] },
+      ],
+      translations: {
+        'Установка завершена': 'ההתקנה הושלמה', 'Недостаточно места на диске': 'אין מספיק מקום בדיסק',
+        'Файл %s не найден': 'הקובץ %s לא נמצא', 'Установка — ФотоМастер 2.4': 'התקנה — פוטומאסטר 2.4',
+        'Вас приветствует мастер установки': 'ברוכים הבאים לאשף ההתקנה',
+        'Программа установит ФотоМастер на ваш компьютер. Рекомендуется закрыть все прочие приложения перед продолжением.':
+          'התוכנית תתקין את פוטומאסטר במחשב שלך. מומלץ לסגור את כל היישומים האחרים לפני שממשיכים.',
+        'Папка установки:': 'תיקיית התקנה:', 'Обзор...': 'עיון...', 'Создать ярлык на рабочем столе': 'צור קיצור דרך בשולחן העבודה',
+        '< Назад': 'הקודם', 'Далее >': 'הבא', 'Отмена': 'ביטול', 'Выход из установки': 'יציאה מההתקנה',
+        'Вы действительно хотите прервать установку?': 'האם אתם בטוחים שברצונכם להפסיק את ההתקנה?', 'Да': 'כן', 'Нет': 'לא',
+      },
+    };
+
+    // ---------------------------------------------------------------- state
     const $ = (id) => document.getElementById(id);
-    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-    let FAST = false;            // ?demo=done renders the finished state instantly
-    let runId = 0;               // cancels an in-flight run on reset
-    const wait = (ms) => (FAST ? Promise.resolve() : sleep(ms));
+    const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+    const params = new URLSearchParams(location.search);
+    const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
 
-    function renderWindow(host) {
-      host.innerHTML = '';
-      host.appendChild($('winTpl').content.cloneNode(true));
-      STRINGS.forEach(([, key, ru]) => { host.querySelector(`[data-k="${key}"]`).textContent = ru; });
-      return host.firstElementChild;
+    let lang = params.get('lang') || store.get('exelat.lang') || ((navigator.language || '').startsWith('he') ? 'he' : 'en');
+    if (!TEXT[lang]) lang = 'en';
+    let desktop = false;          // true once the pywebview bridge is available
+    let S = null;                 // loaded analysis + rows
+    let stage = 0;                // 0 idle · 1 unpacked · 2 translated · 3 mirrored · 4 finished
+    let dlgIndex = 0;
+    let runId = 0;
+    let FAST = params.get('demo') === 'done';
+    let info = { key: null, arg: null, tone: 'idle' };
+    let busy = false;             // false · 'ai' · 'build'
+    let prog = { done: 0, total: 0 };
+    let providers = { cli: false, apiEnv: false };
+    let built = null;             // report of the last successful build
+    let buildError = null, aiNote = null;
+    const MAX_ROWS = 300;
+    const DU_X = 1.8, DU_Y = 1.95; // dialog units -> preview pixels
+
+    TEXT.en.infoPath = TEXT.he.infoPath = (path) => path;
+    const t = (key, ...args) => { const v = TEXT[lang][key]; return typeof v === 'function' ? v(...args) : v; };
+    const wait = (ms) => (FAST ? Promise.resolve() : new Promise((r) => setTimeout(r, ms)));
+    const fmtSize = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
+    const clean = (s) => s.replace(/&(.)/g, '$1').split('\t')[0];   // drop '&' accelerators and shortcut hints
+    const hasLetters = (s) => /\p{L}/u.test(s);
+
+    function buildState(a) {
+      const rows = new Map();
+      const add = (source, where) => {
+        if (!source || !hasLetters(source)) return;
+        const row = rows.get(source);
+        if (row) { row.uses++; return; }
+        const he = a.translations[source] || '';
+        rows.set(source, { source, where, uses: 1, he, origin: he ? (a.sample ? 'sample' : 'glossary') : '' });
+      };
+      const dialogs = a.dialogs.filter((d) => d.items.some((i) => i.visible));
+      a.strings.forEach((s) => add(s.source, `STR ${s.id}`));
+      (a.menus || []).forEach((m) => m.items.forEach((text) => add(text, `MENU ${m.name}`)));
+      a.dialogs.forEach((d) => { add(d.title, `DLG ${d.name}`); d.items.forEach((i) => i.kind !== 'edit' && add(i.text, `DLG ${d.name}`)); });
+      return { ...a, dialogs, rows, list: [...rows.values()], unparsed: a.unparsed || 0 };
+    }
+    const translatedCount = () => S.list.filter((r) => r.he.trim()).length;
+
+    // --------------------------------------------------------------- render
+    function applyI18n() {
+      document.documentElement.lang = lang;
+      document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
+      document.querySelectorAll('[data-i18n]').forEach((n) => { n.textContent = t(n.dataset.i18n); });
+      document.querySelectorAll('[data-i18n-ph]').forEach((n) => { n.placeholder = t(n.dataset.i18nPh); });
+      $('langBtn').textContent = t('langBtn');
+      $('modeBadge').textContent = t(desktop ? 'modeDesktop' : 'modeBrowser');
+      $('dropzone').setAttribute('aria-label', t('dropTitle'));
+      renderAll();
     }
 
-    function renderTable() {
-      $('stringTable').innerHTML = STRINGS.map(([id, , ru]) =>
-        `<tr id="row${id}"><td class="px-3 py-1.5 font-mono text-slate-500">${id}</td>` +
-        `<td class="px-3 py-1.5 text-slate-300 max-w-[160px] truncate">${ru}</td>` +
-        `<td class="px-3 py-1.5 text-right text-slate-600" dir="rtl" lang="he">—</td></tr>`).join('');
+    function renderInfo() {
+      const tones = { idle: 'text-slate-500', ok: 'text-cyanx', bad: 'text-red-400', warn: 'text-amber-glow' };
+      $('fileInfo').className = 'mt-4 text-xs ' + tones[info.tone];
+      $('fileInfo').textContent = info.key ? t(info.key, info.arg) : t(desktop ? 'infoIdleDesktop' : 'infoIdleBrowser');
     }
 
-    function renderHex() {
-      const bytes = '4D 5A 90 00 03 00 00 00 04 00 00 00 FF FF 00 00 B8 00 00 00 00 00 00 00 40 00 00 00 50 45 00 00 4C 01 05 00'.split(' ');
-      let out = '';
-      for (let row = 0; row < 9; row++) {
-        const off = (row * 16).toString(16).padStart(8, '0').toUpperCase();
-        const line = Array.from({ length: 16 }, (_, i) => bytes[(row * 7 + i * 3) % bytes.length]).join(' ');
-        out += `${off}  ${line}\n`;
-      }
-      $('hex').textContent = out;
-    }
-
-    function setStep(index, state) {
+    function renderSummary() {
       const steps = [...document.querySelectorAll('.step')];
-      steps.forEach((el, i) => {
-        el.classList.toggle('done', i < index || state === 'alldone');
-        el.classList.toggle('active', i === index && state !== 'alldone');
+      steps.forEach((n, i) => {
+        n.classList.toggle('done', i < 3 ? stage > i + 1 : !!built);
+        n.classList.toggle('active', (stage >= 1 && stage <= 3 && i === stage - 1) || (i === 3 && busy === 'build'));
+        n.classList.toggle('skipped', i === 3 && stage === 4 && !built && busy !== 'build');
       });
-      $('progress').style.width = state === 'alldone' ? '100%' : `${(index / steps.length) * 100 + 8}%`;
-      if (state !== 'alldone' && steps[index]) $('statusText').textContent = steps[index].dataset.msg + '…';
+      $('progress').style.width = built ? '100%' : ['0%', '20%', '45%', '70%', '85%'][stage];
+      $('hexBox').classList.toggle('scanning', stage >= 1 && stage <= 3);
+
+      if (!S) {
+        $('fileName').textContent = t('noFile'); $('fileMeta').textContent = '';
+        $('statusText').textContent = t('statusIdle');
+        ['statSections', 'statStrings', 'statDialogs', 'statTranslated'].forEach((id) => { $(id).textContent = '–'; });
+        $('hex').textContent = ''; $('sections').replaceChildren(); $('notes').textContent = '';
+        return;
+      }
+      $('fileName').textContent = S.file.name;
+      $('fileMeta').textContent = `${fmtSize(S.file.size)} · ${S.file.machine}${S.file.signed ? ' · signed' : ''}`;
+      $('statusText').textContent = stage === 4 ? t('stDone', translatedCount(), S.list.length) : t('st' + stage);
+      $('statSections').textContent = S.sections.length;
+      $('statStrings').textContent = S.list.length;
+      $('statDialogs').textContent = S.dialogs.length;
+      $('statTranslated').textContent = stage >= 2 ? translatedCount() : 0;
+
+      const bytes = S.file.head.match(/../g) || [];
+      let hex = '';
+      for (let i = 0; i < bytes.length; i += 16) hex += i.toString(16).padStart(8, '0').toUpperCase() + '  ' + bytes.slice(i, i + 16).join(' ').toUpperCase() + '\n';
+      $('hex').textContent = hex;
+
+      $('sections').replaceChildren(...S.sections.map((s) => {
+        const row = el('div', 'flex justify-between gap-3');
+        row.append(el('span', s.name === '.rsrc' ? 'text-amber-glow' : 'text-slate-300', s.name), el('span', 'text-slate-500', `${fmtSize(s.virtualSize)} / ${fmtSize(s.rawSize)}`));
+        return row;
+      }));
+      const notes = [];
+      if (S.file.signed) notes.push(t('noteSigned'));
+      if (S.file.appended > 0) notes.push(t('noteAppended'));
+      if (!S.list.length && !S.dialogs.length) notes.push(t('noteEmpty'));
+      if (S.unparsed > 0) notes.push(t('noteUnparsed', S.unparsed));
+      $('notes').textContent = notes.join(' ');
+    }
+
+    // One dialog -> DOM. `rtl` mirrors the layout, `translate` swaps in Hebrew.
+    function dialogNode(d, rtl, translate) {
+      const tx = (s) => clean((translate && S.rows.get(s) && S.rows.get(s).he.trim()) || s);
+      const win = el('div', 'win select-none');
+      win.dir = rtl ? 'rtl' : 'ltr';
+      win.style.width = Math.round(d.cx * DU_X) + 2 + 'px';
+
+      const title = el('div', 'win-title');
+      const caps = el('span', 'flex gap-0.5');
+      caps.dir = 'ltr';
+      ['_', '□', '✕'].forEach((c) => caps.append(el('span', 'win-btn win-cap', c)));
+      const titleText = el('span', 'truncate', tx(d.title) || d.name);
+      titleText.dir = 'auto';
+      title.append(titleText, caps);
+
+      const client = el('div', 'win-client');
+      client.style.height = Math.round(d.cy * DU_Y) + 'px';
+      for (const item of d.items) {
+        if (!item.visible || item.cx <= 0) continue;
+        const text = item.kind === 'edit' ? item.text : tx(item.text);
+        let node;
+        switch (item.kind) {
+          case 'button': case 'default-button':
+            node = el('div', 'win-btn' + (item.kind === 'default-button' ? ' is-default' : ''), text); break;
+          case 'checkbox': case 'radio':
+            node = el('div', 'win-check');
+            node.append(el('span', 'win-box' + (item.kind === 'radio' ? ' round' : '')), el('span', '', text)); break;
+          case 'groupbox':
+            node = el('div', 'win-group'); if (text) node.append(el('span', '', text)); break;
+          case 'edit':
+            node = el('div', 'win-input font-mono', text); node.dir = 'ltr'; node.style.fontSize = '11px'; break;
+          case 'combobox':
+            node = el('div', 'win-input justify-between'); node.append(el('span', '', text), el('span', 'win-hint', '▾')); break;
+          case 'listbox': case 'custom':
+            node = el('div', 'win-input items-start'); node.append(el('span', 'win-hint', text || String(item.class))); break;
+          case 'scrollbar': node = el('div'); node.style.background = '#d4d0c8'; break;
+          case 'image':
+            node = item.cx > 30 ? el('div', 'win-banner', '▣') : el('div', 'flex items-center justify-center text-[18px] text-[#3a6ea5]', '▣'); break;
+          case 'frame': node = el('div', item.cy <= 3 ? 'win-line' : 'win-group'); break;
+          default:
+            node = el('div', '', text);
+            node.style.textAlign = item.kind === 'text-center' ? 'center' : ((item.kind === 'text-right') !== rtl ? 'right' : 'left');
+            if (item.bold) { node.style.fontWeight = '700'; node.style.fontSize = '14px'; }
+        }
+        if (node.dir !== 'ltr') node.dir = rtl ? 'rtl' : 'ltr';
+        const x = rtl ? d.cx - item.x - item.cx : item.x;      // same formula as mirror_control() in main.py
+        const height = item.kind === 'combobox' ? Math.min(item.cy, 14) : item.cy;
+        Object.assign(node.style, { left: x * DU_X + 'px', top: item.y * DU_Y + 'px', width: item.cx * DU_X + 'px', height: Math.max(height * DU_Y, item.kind === 'frame' ? 2 : 0) + 'px' });
+        client.append(node);
+      }
+      win.append(title, client);
+      return win;
+    }
+
+    function fitPreview() {
+      for (const id of ['winSource', 'winTarget']) {
+        const host = $(id), win = host.firstElementChild;
+        if (!win) continue;
+        win.style.transform = '';
+        const scale = Math.min(1, host.clientWidth / win.offsetWidth);
+        win.style.transform = scale < 1 ? `scale(${scale})` : '';
+        host.style.height = Math.ceil(win.offsetHeight * scale) + 'px';
+      }
+    }
+
+    function renderPreview() {
+      const has = S && S.dialogs.length > 0;
+      $('previewGrid').classList.toggle('hidden', !has);
+      $('previewEmpty').classList.toggle('hidden', !!has);
+      $('previewEmpty').textContent = t(S ? 'previewEmptyNone' : 'previewEmptyIdle');
+      $('prevDlg').disabled = !has || dlgIndex === 0;
+      $('nextDlg').disabled = !has || dlgIndex >= S.dialogs.length - 1;
+      $('dlgSelect').disabled = !has;
+      if (!has) { $('dlgSelect').replaceChildren(); return; }
+
+      if ($('dlgSelect').options.length !== S.dialogs.length) {
+        $('dlgSelect').replaceChildren(...S.dialogs.map((d, i) => {
+          const o = el('option', '', `${d.name} — ${clean(d.title) || '(untitled)'} · ${d.items.filter((x) => x.visible).length} ${t('controls')}`);
+          o.value = i; return o;
+        }));
+      }
+      $('dlgSelect').value = dlgIndex;
+      const d = S.dialogs[dlgIndex];
+      $('winSource').replaceChildren(dialogNode(d, false, false));
+      $('winTarget').replaceChildren(dialogNode(d, stage >= 3, stage >= 2));
+      const mode = stage >= 3 ? 'outMirrored' : stage === 2 ? 'outTranslated' : 'outWaiting';
+      $('outBadge').textContent = t(mode);
+      $('outBadge').className = 'px-2 py-0.5 rounded font-mono ' + (stage >= 3 ? 'bg-amber-glow text-ink-950 font-bold' : 'bg-ink-800 border border-ink-600 text-slate-300');
+      $('outCaption').textContent = t(mode + 'Cap');
+      fitPreview();
+    }
+
+    function renderStrings(flash = false) {
+      const body = $('stringTable');
+      $('exportBtn').disabled = !S || stage < 4 || !S.list.length;
+      if (!S) { body.replaceChildren(); $('rowCount').textContent = ''; $('tableNote').textContent = t('tableIdle'); return; }
+      const q = $('search').value.trim().toLowerCase(), mode = $('filter').value;
+      const matches = S.list.filter((r) => {
+        const done = stage >= 2 && r.he.trim();
+        if (mode === 'done' && !done) return false;
+        if (mode === 'todo' && done) return false;
+        return !q || r.source.toLowerCase().includes(q) || r.he.toLowerCase().includes(q) || r.where.toLowerCase().includes(q);
+      });
+      const shown = matches.slice(0, MAX_ROWS);
+      $('rowCount').textContent = `${stage >= 2 ? translatedCount() : 0} / ${S.list.length}`;
+      $('tableNote').textContent = !matches.length ? t('tableNoMatch') : matches.length > shown.length ? t('tableMore', shown.length, matches.length) : '';
+
+      body.replaceChildren(...shown.map((r) => {
+        const tr = el('tr');
+        const where = el('td', 'px-3 py-1.5 font-mono text-xs text-slate-500 truncate', r.where + (r.uses > 1 ? ` ×${r.uses}` : ''));
+        where.dir = 'ltr';
+        const source = el('td', 'px-3 py-1.5 text-slate-300 truncate', r.source);
+        source.dir = 'auto'; source.title = r.source;
+        const heCell = el('td', 'px-3 py-1');
+        const input = el('input', 'he-input text-amber-glow');
+        input.dir = 'rtl'; input.lang = 'he'; input.placeholder = t('hePh');
+        input.value = stage >= 2 ? r.he : ''; input.disabled = stage < 2;
+        input.setAttribute('aria-label', `${t('colHebrew')}: ${r.source}`);
+        const status = el('td', 'px-3 py-1.5 text-xs');
+        const paint = () => {
+          const key = stage < 2 || !r.he.trim() ? 'stTodo' : { manual: 'stManual', sample: 'stSample', ai: 'stAi' }[r.origin] || 'stGlossary';
+          status.textContent = t(key);
+          status.className = 'px-3 py-1.5 text-xs ' + (key === 'stTodo' ? 'text-slate-600' : key === 'stManual' ? 'text-amber-glow' : 'text-cyanx');
+        };
+        input.addEventListener('input', () => {
+          r.he = input.value; r.origin = 'manual'; paint(); renderControls();
+          $('rowCount').textContent = `${translatedCount()} / ${S.list.length}`;
+          $('statTranslated').textContent = translatedCount();
+          if (stage === 4) $('statusText').textContent = t('stDone', translatedCount(), S.list.length);
+          renderPreview();
+        });
+        paint();
+        if (flash && r.he) heCell.classList.add('flash');
+        heCell.append(input);
+        tr.append(where, source, heCell, status);
+        return tr;
+      }));
+    }
+
+    function renderControls() {
+      const ready = S && stage === 4 && !busy;
+      const missing = S ? S.list.filter((r) => !r.he.trim()).length : 0;
+      const provider = $('provider').value;
+      $('apiKey').classList.toggle('hidden', provider !== 'api');
+      $('aiBtn').textContent = busy === 'ai' ? t('aiBusy', prog.done, prog.total) : t('aiBtn', missing);
+      $('aiBtn').disabled = !desktop || !ready || !missing || (provider === 'cli' && !providers.cli)
+        || (provider === 'api' && !providers.apiEnv && !$('apiKey').value.trim());
+      $('aiBtn').title = !desktop ? t('desktopOnly') : provider === 'cli' && !providers.cli ? t('aiNoCli') : '';
+      $('buildBtn').textContent = busy === 'build' ? t('buildBusy') : t('build');
+      $('buildBtn').disabled = !desktop || !ready || !S.file.path || !translatedCount();
+      $('buildBtn').title = desktop ? t('buildHint') : t('desktopOnly');
+
+      $('aiNote').classList.toggle('hidden', !aiNote);
+      if (aiNote) { $('aiNote').textContent = t(aiNote.key, ...aiNote.args); $('aiNote').className = 'mt-3 text-xs ' + (aiNote.key === 'aiError' ? 'text-red-400' : 'text-cyanx'); }
+
+      $('buildResult').classList.toggle('hidden', !built && !buildError);
+      $('revealBtn').classList.toggle('hidden', !built);
+      if (buildError) { $('buildText').textContent = t('buildError', buildError); $('buildText').className = 'text-red-400'; }
+      else if (built) {
+        const lines = [t('buildDone', built)];
+        if (built.signatureRemoved) lines.push(t('buildSig'));
+        if (built.appendedBytes) lines.push(t('buildAppended'));
+        if (built.skipped) lines.push(t('buildSkipped', built.skipped));
+        lines.push(t('buildHint'));
+        $('buildText').textContent = lines.join(' ');
+        $('buildText').className = 'text-cyanx';
+      }
+    }
+
+    function renderAll() { renderInfo(); renderSummary(); renderPreview(); renderStrings(); renderControls(); }
+
+    async function aiTranslate() {
+      const missing = S.list.filter((r) => !r.he.trim());
+      const my = runId;
+      busy = 'ai'; prog = { done: 0, total: missing.length }; aiNote = null; renderControls();
+      let result;
+      try { result = await window.pywebview.api.translate(missing.map((r) => r.source), $('provider').value, $('apiKey').value.trim()); }
+      catch (error) { result = { translations: {}, rejected: [], error: String(error) }; }
+      busy = false;
+      if (my !== runId) return;                              // another file was loaded meanwhile
+      let count = 0;
+      for (const [source, hebrew] of Object.entries(result.translations || {})) {
+        const row = S.rows.get(source);
+        if (row && !row.he.trim()) { row.he = hebrew; row.origin = 'ai'; count++; }
+      }
+      aiNote = result.error ? { key: 'aiError', args: [result.error, count] } : { key: 'aiDone', args: [count, (result.rejected || []).length] };
+      if (count) built = null;                               // the previous build is now out of date
+      renderAll();
+    }
+    window.exelatProgress = (done, total) => { prog = { done, total }; if (busy === 'ai') renderControls(); };
+
+    async function buildExe() {
+      const translations = {};
+      S.list.forEach((r) => { if (r.he.trim()) translations[r.source] = r.he.trim(); });
+      busy = 'build'; buildError = null; renderSummary(); renderControls();
+      let result;
+      try { result = await window.pywebview.api.build(S.file.path, translations, $('optDialogs').checked, $('optWindows').checked); }
+      catch (error) { result = { ok: false, error: String(error) }; }
+      busy = false;
+      if (result && result.ok === false) buildError = result.error;
+      else if (result) built = result;
+      renderSummary(); renderControls();
+      if (built) $('statusText').textContent = t('stBuilt', built.output.split(/[\\/]/).pop());
+    }
+
+    // ----------------------------------------------------------------- flow
+    async function load(analysis) {
+      const my = ++runId;
+      built = null; buildError = null; aiNote = null; busy = false;
+      S = buildState(analysis); dlgIndex = 0; stage = 1;
+      $('search').value = ''; $('filter').value = 'all'; $('dlgSelect').replaceChildren();
+      renderAll();
+      await wait(900); if (my !== runId) return;
+      stage = 2; renderSummary(); renderPreview(); renderStrings(true);
+      await wait(1100); if (my !== runId) return;
+      stage = 3; renderSummary(); renderPreview();
+      await wait(900); if (my !== runId) return;
+      stage = 4; renderSummary(); renderStrings(); renderControls();
     }
 
     function reset() {
-      runId++;
-      renderWindow($('winSource'));
-      renderWindow($('winTarget'));
-      renderTable();
-      document.querySelectorAll('.step').forEach((el) => el.classList.remove('active', 'done'));
-      $('progress').style.width = '0';
-      $('hexBox').classList.remove('scanning');
-      $('statusText').textContent = 'waiting for input';
-      $('outBadge').textContent = 'OUTPUT';
-      $('outBadge').className = 'px-2 py-0.5 rounded bg-ink-800 border border-ink-600 text-slate-300';
-      $('outCaption').textContent = 'waiting — mirrors the original until translated';
-      $('demoBtn').disabled = false;
+      runId++; S = null; stage = 0; dlgIndex = 0;
+      built = null; buildError = null; aiNote = null; busy = false;
+      info = { key: null, arg: null, tone: 'idle' };
+      $('search').value = ''; renderAll();
     }
 
-    async function run(fileName) {
-      reset();
-      const my = runId;
-      const alive = () => my === runId;
-      const target = $('winTarget').firstElementChild;
-      $('demoBtn').disabled = true;
-      $('hexBox').classList.add('scanning');
-      $('outCaption').textContent = `processing ${fileName}`;
-
-      setStep(0); await wait(1400); if (!alive()) return;
-
-      setStep(1);
-      for (const [id, key, , he] of STRINGS) {
-        await wait(330); if (!alive()) return;
-        const el = target.querySelector(`[data-k="${key}"]`);
-        el.textContent = he; el.lang = 'he'; el.dir = 'rtl';
-        el.classList.add('flash');
-        const cell = $(`row${id}`).lastElementChild;
-        cell.textContent = he; cell.className = 'px-3 py-1.5 text-right text-amber-glow';
-        if (!FAST) $('stringTable').parentElement.parentElement.scrollTop = $(`row${id}`).offsetTop - 40;
-      }
-
-      setStep(2); await wait(900); if (!alive()) return;
-      target.dir = 'rtl';                       // the whole dialog mirrors, like WS_EX_LAYOUTRTL
-      target.querySelectorAll('[data-k]').forEach((el) => el.removeAttribute('dir'));
-      await wait(900); if (!alive()) return;
-
-      setStep(3); await wait(1200); if (!alive()) return;
-
-      setStep(0, 'alldone');
-      $('hexBox').classList.remove('scanning');
-      $('statusText').textContent = `done — ${STRINGS.length} strings, 1 dialog mirrored`;
-      $('outBadge').textContent = 'TRANSLATED';
-      $('outBadge').className = 'px-2 py-0.5 rounded bg-amber-glow text-ink-950 font-bold';
-      $('outCaption').textContent = 'Hebrew · RTL · layout mirrored';
-      $('demoBtn').disabled = false;
+    function handleResult(result) {
+      if (!result) return;                                   // dialog cancelled
+      if (result.ok === false) { info = { key: 'infoError', arg: result.error, tone: 'bad' }; renderInfo(); return; }
+      info = { key: 'infoPath', arg: result.file.path || result.file.name, tone: 'ok' };
+      load(result);
     }
+    window.exelatLoad = handleResult;                        // called from Python on a native file drop
 
-    // --- Drop zone wiring ---
-    const dz = $('dropzone');
-    const accept = (file) => {
+    function acceptBrowserFile(file) {
       if (!file) return;
-      if (!/\.(exe|dll|msi)$/i.test(file.name)) {
-        $('fileInfo').textContent = `"${file.name}" is not a Windows executable (.exe, .dll, .msi).`;
-        $('fileInfo').className = 'mt-4 font-mono text-xs text-red-400';
+      if (!/\.(exe|dll|mui|ocx|cpl|scr)$/i.test(file.name)) { info = { key: 'infoBadType', arg: file.name, tone: 'bad' }; renderInfo(); return; }
+      info = { key: 'infoBrowserFile', arg: file.name, tone: 'warn' };
+      load(SAMPLE);
+    }
+
+    async function exportPlan() {
+      const plan = {
+        generator: 'ExeLat PoC', file: S.file.name, target: 'he',
+        note: 'Translation table: every distinct UI text of the file and its Hebrew translation.',
+        texts: S.list.map((r) => ({ source: r.source, where: r.where, uses: r.uses, hebrew: r.he.trim() || null, origin: r.he.trim() ? r.origin : null })),
+      };
+      const json = JSON.stringify(plan, null, 2);
+      const name = S.file.name.replace(/\.[^.]+$/, '') + '.he.plan.json';
+      if (desktop) {
+        const saved = await window.pywebview.api.export_plan(name, json);
+        if (saved) $('statusText').textContent = t('exported', saved);
         return;
       }
-      $('fileInfo').textContent = `${file.name} · ${(file.size / 1024).toFixed(0)} KB`;
-      $('fileInfo').className = 'mt-4 font-mono text-xs text-cyanx';
-      run(file.name);
-    };
-    dz.addEventListener('click', () => $('fileInput').click());
-    dz.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('fileInput').click(); } });
-    $('fileInput').addEventListener('change', (e) => accept(e.target.files[0]));
-    ['dragenter', 'dragover'].forEach((t) => dz.addEventListener(t, (e) => { e.preventDefault(); dz.classList.add('dragover'); }));
-    ['dragleave', 'drop'].forEach((t) => dz.addEventListener(t, (e) => { e.preventDefault(); dz.classList.remove('dragover'); }));
-    dz.addEventListener('drop', (e) => accept(e.dataTransfer.files[0]));
-    $('demoBtn').addEventListener('click', () => run('FotoMaster_Setup.exe'));
-    $('resetBtn').addEventListener('click', () => {
-      reset();
-      $('fileInfo').textContent = 'No file selected. Files never leave this page in the mockup.';
-      $('fileInfo').className = 'mt-4 font-mono text-xs text-slate-500';
-    });
+      const a = el('a'); a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' })); a.download = name; a.click();
+      URL.revokeObjectURL(a.href);
+    }
 
-    renderHex();
-    reset();
-    // ?demo=play autoplays the animation, ?demo=done jumps to the finished state
-    const demo = new URLSearchParams(location.search).get('demo');
-    if (demo === 'done') { FAST = true; run('FotoMaster_Setup.exe').then(() => { FAST = false; }); }
-    else if (demo === 'play') run('FotoMaster_Setup.exe');
+    // --------------------------------------------------------------- wiring
+    const dz = $('dropzone');
+    const browse = async () => { if (desktop) handleResult(await window.pywebview.api.pick_file()); else $('fileInput').click(); };
+    dz.addEventListener('click', browse);
+    dz.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); browse(); } });
+    $('fileInput').addEventListener('change', (e) => { acceptBrowserFile(e.target.files[0]); e.target.value = ''; });
+    ['dragenter', 'dragover'].forEach((type) => dz.addEventListener(type, (e) => { e.preventDefault(); dz.classList.add('dragover'); }));
+    ['dragleave', 'drop'].forEach((type) => dz.addEventListener(type, (e) => { e.preventDefault(); dz.classList.remove('dragover'); }));
+    dz.addEventListener('drop', (e) => { if (!desktop) acceptBrowserFile(e.dataTransfer.files[0]); });   // desktop drops are handled in app.py
+    window.addEventListener('dragover', (e) => e.preventDefault());
+    window.addEventListener('drop', (e) => e.preventDefault());
+
+    $('demoBtn').addEventListener('click', () => { info = { key: null, arg: null, tone: 'idle' }; load(SAMPLE); });
+    $('resetBtn').addEventListener('click', reset);
+    $('langBtn').addEventListener('click', () => { lang = lang === 'en' ? 'he' : 'en'; store.set('exelat.lang', lang); applyI18n(); });
+    $('search').addEventListener('input', () => renderStrings());
+    $('filter').addEventListener('change', () => renderStrings());
+    $('exportBtn').addEventListener('click', exportPlan);
+    $('aiBtn').addEventListener('click', aiTranslate);
+    $('buildBtn').addEventListener('click', buildExe);
+    $('revealBtn').addEventListener('click', () => built && window.pywebview.api.reveal(built.output));
+    $('provider').addEventListener('change', renderControls);
+    $('apiKey').addEventListener('input', renderControls);
+    $('dlgSelect').addEventListener('change', (e) => { dlgIndex = +e.target.value; renderPreview(); });
+    $('prevDlg').addEventListener('click', () => { dlgIndex--; renderPreview(); });
+    $('nextDlg').addEventListener('click', () => { dlgIndex++; renderPreview(); });
+    window.addEventListener('resize', fitPreview);
+
+    async function enterDesktop() {
+      if (desktop) return;
+      desktop = true;
+      try {
+        $('versionBadge').textContent = 'v' + (await window.pywebview.api.version());
+        providers = await window.pywebview.api.providers();
+        if (!providers.cli) $('provider').value = 'api';
+      } catch {}
+      applyI18n();
+    }
+    window.addEventListener('pywebviewready', enterDesktop);
+    if (window.pywebview && window.pywebview.api) enterDesktop();
+
+    applyI18n();
+    if (params.get('demo')) load(SAMPLE).then(() => { FAST = false; });   // ?demo=play animates, ?demo=done jumps to the end
   </script>
 </body>
 </html>

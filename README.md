@@ -5,145 +5,144 @@
 <h1 align="center">ExeLat — Executable Translator</h1>
 
 <p align="center">
-  <b>AI-assisted localisation of compiled Windows software from LTR languages to Hebrew (RTL).</b>
+  <b>Translate compiled Windows programs into Hebrew — text and right-to-left layout — without the source code.</b>
 </p>
 
 <p align="center">
-  <img alt="Status" src="https://img.shields.io/badge/status-proof%20of%20concept-f5b941" />
+  <a href="https://github.com/dor2500/ExeLat-PoC/releases/latest"><img alt="Download" src="https://img.shields.io/github/v/release/dor2500/ExeLat-PoC?label=download&color=f5b941" /></a>
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-0078D6" />
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white" />
-  <img alt="Platform" src="https://img.shields.io/badge/target-Win32%20PE-0078D6" />
-  <img alt="UI" src="https://img.shields.io/badge/UI-Tailwind%20CSS-38BDF8?logo=tailwindcss&logoColor=white" />
-  <img alt="Direction" src="https://img.shields.io/badge/LTR%20%E2%86%92%20RTL-RU%20%2F%20EN%20%E2%86%92%20HE-4fd8e0" />
+  <img alt="Direction" src="https://img.shields.io/badge/LTR%20%E2%86%92%20RTL-EN%20%2F%20RU%20%E2%86%92%20HE-4fd8e0" />
 </p>
 
 ---
 
 ## 📖 Project Overview
 
-Plenty of useful Windows software — installers, utilities, older Win32 apps — was never released in Hebrew, and its source code is long gone. **ExeLat** explores whether that software can be localised anyway, working directly on the compiled binary.
+Plenty of useful Windows software was never released in Hebrew, and its source code is not available. **ExeLat** localises such a program directly from its compiled `.exe`:
 
-Translating to Hebrew is more than swapping strings. Hebrew reads right-to-left, so a correct result also has to **mirror the user interface**: labels move to the right of their fields, button order flips, text aligns right. ExeLat treats both as one problem:
-
-1. Pull the text and dialog layouts out of the executable.
-2. Translate the text with a large language model.
-3. Flip the layout for RTL.
-4. Put everything back.
-
-![ExeLat pipeline](assets/architecture.png)
-
-> [!IMPORTANT]
-> **This repository is a proof of concept.** It contains a UI mockup and a commented conceptual backend. It does not yet produce a working translated executable. See [Project Status](#-project-status) for exactly what runs today.
-
-## ✨ Features
-
-ExeLat is designed around three strategies, tried from cheapest to most invasive. Which one applies depends on where a program keeps its text.
-
-### 📦 Static Translation
-For programs that store their UI in PE resources (string tables, dialogs, menus).
-
-- Parses the PE file and walks the `.rsrc` resource tree
-- Extracts `RT_STRING`, `RT_DIALOG` and `RT_MENU` entries
-- Sends strings to an LLM in batches, keyed by resource ID, preserving placeholders (`%s`, `%1`) and `&` accelerators
-- Mirrors dialog templates and sets `WS_EX_LAYOUTRTL | WS_EX_RTLREADING`
-- Rebuilds the resource section and patches the PE headers
-
-### 🪝 Dynamic API Hooking
-For programs that build their text in code, so there is nothing in the resources to patch.
-
-- Injects a helper DLL into the running process
-- Hooks text-carrying Win32 calls such as `CreateWindowExW`, `SetWindowTextW`, `DrawTextW` and `TextOutW`
-- Looks each string up in a translation cache (falling back to the LLM for unseen strings) and substitutes it before the original call runs
-- Applies RTL extended styles to windows as they are created
-
-### 🔍 OCR Overlay
-The last resort, for programs that draw their own UI as pixels (custom skins, games, some installers).
-
-- Captures the application window
-- Runs OCR to find text regions and read the source text
-- Translates and draws the Hebrew text in a transparent, click-through overlay window positioned over the original
-
-| Strategy | Works when | Modifies the file | Mirrors layout |
-|---|---|---|---|
-| Static Translation | text lives in `.rsrc` | ✅ yes | ✅ fully |
-| Dynamic API Hooking | text is created at runtime | ❌ no (in memory) | ✅ mostly |
-| OCR Overlay | text is rendered as pixels | ❌ no | ❌ text only |
-
-## 🖥️ Dashboard Mockup
-
-`index.html` is a self-contained mockup of the ExeLat dashboard: a drag-and-drop zone for `.exe` files, an animated pipeline, and a live side-by-side preview of an installer dialog going from Russian (LTR) to Hebrew (RTL).
+1. **Unpack** — reads the program's menus, dialogs and string tables out of the PE resource section.
+2. **Translate** — standard terms from a built-in glossary, everything else with Claude (or by hand).
+3. **UI RTL fix** — marks every dialog, and optionally every main window, as mirrored, so Windows lays the interface out right-to-left.
+4. **Repack** — writes a translated copy of the executable. The original is never modified.
 
 ![ExeLat dashboard](assets/mockup_preview.png)
 
+### Verified result
+
+7-Zip File Manager (`7zFM.exe`, 406 distinct UI texts) was translated end to end in about 30 seconds. The output starts, its main window reports `WS_EX_LAYOUTRTL`, and its menu reads `קובץ → פתח, שנה שם, מחק, מאפיינים, צור תיקיה…` with shortcuts (`F2`, `Ctrl+N`) intact.
+
+## ⬇️ Download
+
+Get **`ExeLat.exe`** from the [latest release](https://github.com/dor2500/ExeLat-PoC/releases/latest). It is a single file; nothing to install. Windows 10/11 already include the WebView2 runtime it uses.
+
+The file is not code-signed, so SmartScreen will show "Windows protected your PC" the first time. Choose **More info → Run anyway**, or build it yourself from source (below).
+
+## 🚀 How to use
+
+1. Open `ExeLat.exe` and drop a program on it (or click to choose a file).
+2. Review the **Live Preview**: every dialog, original on one side, mirrored Hebrew on the other.
+3. Press **Translate missing with AI**. Pick how to reach Claude:
+   - **Claude Code (this PC)** — uses the `claude` command line if it is installed. No API key.
+   - **Anthropic API key** — paste a key; it is used for that request only and never saved.
+4. Fix anything you like by typing in the Hebrew column. The preview updates as you type.
+5. Press **Build translated EXE** and save the new file **next to the original**, so it finds its DLLs.
+
+Programs installed under `C:\Program Files` cannot be written to without administrator rights. Save the output elsewhere and copy it over, or run ExeLat as administrator.
+
+## ✨ Features
+
+### 📦 Static Translation — implemented
+- Reads and rewrites `RT_STRING`, `RT_DIALOG` (both `DLGTEMPLATE` and `DLGTEMPLATEEX`) and `RT_MENU` (classic and extended) resources.
+- Every parser has a matching serializer, and a resource is only modified if rebuilding it unchanged reproduces the original bytes. This check passes for all 4,211 resources tested across ~400 Windows system files and third-party programs.
+- AI translations are validated before use: placeholders (`%s`, `%1`, `{0}`) and keyboard shortcuts must survive unchanged, otherwise the string is left for you.
+- Mirrors dialogs with `WS_EX_LAYOUTRTL`. Mirrors main windows by prefixing the version resource's `FileDescription` with two left-to-right marks, which makes Windows enable RTL layout for the whole process.
+- Writes the result with the Windows resource-update API, removes the now-invalid Authenticode signature, carries over appended data, and recomputes the PE checksum.
+
+### 🪝 Dynamic API Hooking — design only
+For programs that build their text in code. A helper DLL would hook `CreateWindowExW`, `SetWindowTextW`, `DrawTextW` and friends and substitute strings at runtime. Not implemented.
+
+### 🔍 OCR Overlay — design only
+For programs that draw their own UI as pixels. Capture the window, OCR it, and draw Hebrew in a click-through overlay. Not implemented.
+
+![ExeLat pipeline](assets/architecture.png)
+
+## ⚠️ What it can and cannot translate
+
+ExeLat changes text that lives in **Win32 resources**. That covers classic Win32 and MFC programs well. It does **not** reach:
+
+| Not translated | Why |
+|---|---|
+| Text built in code | It is in the compiled instructions, not in a resource |
+| .NET (WinForms/WPF), Qt, Electron, Java apps | They keep their UI in their own formats |
+| Delphi / C++Builder forms | Stored as `RCDATA` form streams, not dialogs |
+| Programs with external language files | Translate those files instead (7-Zip, for example, also has `Lang\*.txt`) |
+| Packed or self-verifying executables | They detect the change and refuse to run |
+| Installers | Their payload is appended data that most installers checksum |
+
+Other things to know:
+
+- **Signatures.** The output is unsigned. Windows may warn about it until you sign it yourself.
+- **`.mui` files.** Modern Windows components keep resources in `en-US\app.exe.mui`. ExeLat tells you when an `.exe` has none of its own; open the `.mui` file instead.
+- **Non-Unicode programs** show Hebrew only when the Windows "language for non-Unicode programs" is Hebrew.
+- **Layout.** Mirroring is done by Windows; controls are not resized, so a long translation can be clipped.
+
 ## 🧰 Tech Stack
 
-| Layer | Technology | Role |
-|---|---|---|
-| Binary parsing | [`pefile`](https://github.com/erocarrera/pefile) | Read PE headers, sections and resources |
-| Translation | Any LLM API | Context-aware UI string translation |
-| Backend | Python 3.10+ | Pipeline orchestration (`main.py`) |
-| Frontend | HTML, [Tailwind CSS](https://tailwindcss.com) (CDN), vanilla JS | Dashboard mockup (`index.html`) |
-| Planned: hooking | C/C++ DLL, Microsoft Detours or MinHook | Runtime API interception |
-| Planned: OCR | Tesseract or Windows.Media.Ocr | Reading rendered text |
+| Layer | Technology |
+|---|---|
+| PE parsing | [`pefile`](https://github.com/erocarrera/pefile) |
+| Resource formats | Own parsers/serializers (`pe_resources.py`) |
+| Writing the executable | Windows `BeginUpdateResource` / `UpdateResource` / `EndUpdateResource` via `ctypes` |
+| Translation | Claude through the official [`anthropic`](https://github.com/anthropics/anthropic-sdk-python) SDK, or the Claude Code CLI |
+| Desktop shell | [`pywebview`](https://pywebview.flowrl.com/) (WebView2) |
+| UI | HTML, [Tailwind CSS](https://tailwindcss.com) (compiled, works offline), vanilla JS |
+| Packaging | PyInstaller, single file |
 
-## 🚀 How to Run the PoC
-
-### 1. Clone
+## 🛠️ Run from source
 
 ```bash
 git clone https://github.com/dor2500/ExeLat-PoC.git
 cd ExeLat-PoC
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+.venv\Scripts\python app.py
 ```
 
-### 2. Open the dashboard mockup
-
-Open `index.html` in any modern browser — no build step and no server. An internet connection is needed the first time, to load Tailwind and fonts from their CDNs.
-
-- Click **Run demo translation** to watch the simulated pipeline, or drop any `.exe` on the drop zone.
-- Append `?demo=done` to the URL to jump straight to the finished state.
-
-The mockup never reads or uploads the file you drop; it only uses its name and size.
-
-### 3. Run the conceptual backend
+Command line, without the window:
 
 ```bash
-pip install pefile
-python main.py path/to/some-app.exe
+python main.py app.exe                              # inspect
+python main.py app.exe --out app.he.exe             # glossary only
+python main.py app.exe --out app.he.exe --ai cli --mirror-windows
 ```
 
-This parses the executable, lists the strings found in its string tables, and runs them through a **stubbed** translator (each string is tagged `[he]` rather than translated). Add `--json` for machine-readable output. No network calls are made.
+Build the single-file executable (needs `pip install pyinstaller`; Node.js only if you changed the UI's CSS classes):
 
-## 🧭 Project Status
+```powershell
+.\build.ps1
+```
 
-| Component | State |
-|---|---|
-| Dashboard mockup (`index.html`) | ✅ Working — the pipeline is simulated in the browser |
-| PE parsing and string-table extraction (`main.py`) | ✅ Working |
-| LLM translation | 🟡 Stub — prompt and batching are written, the API call is not |
-| Dialog template rewrite (RTL fix) | 🟡 Mirroring maths implemented; template parser is pseudo-code |
-| Repacking the executable | 🔴 Pseudo-code only, documented step by step |
-| Dynamic API hooking | 🔴 Design only |
-| OCR overlay | 🔴 Design only |
+`index.html` also opens directly in a browser as a demo with sample data.
 
 ## 📁 Repository Layout
 
 ```
 ExeLat-PoC/
-├── README.md
-├── index.html              # dashboard mockup
-├── main.py                 # conceptual backend
-└── assets/
-    ├── logo.png
-    ├── architecture.png
-    ├── mockup_preview.png
-    └── *.svg               # sources for the logo and diagram
+├── app.py              # desktop app (pywebview bridge)
+├── main.py             # analysis + command line
+├── pe_resources.py     # string table / dialog / menu / version formats
+├── patcher.py          # writes the translated executable
+├── translator.py       # Claude translation + validation
+├── glossary.py         # offline EN/RU -> HE UI terms
+├── index.html          # dashboard
+├── build.ps1           # PyInstaller build
+└── assets/             # logo, diagram, screenshot, compiled CSS
 ```
 
-## ⚠️ Known Limits
+## 🔒 Privacy
 
-- **Signatures break.** Any change to a signed executable invalidates its Authenticode signature; the output must be re-signed with your own certificate.
-- **Packed or self-checking binaries** will not survive static patching.
-- **Installers with appended payloads** (NSIS, Inno Setup) need their trailing data preserved.
-- **Bidirectional text** — paths, numbers and product names inside Hebrew sentences — needs care that a simple mirror does not provide.
+Files are read and written locally. AI translation sends only the UI texts being translated to Claude — never the executable.
 
 ## ⚖️ Responsible Use
 

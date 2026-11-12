@@ -6,6 +6,13 @@ venv/
 *.egg-info/
 .pytest_cache/
 
+# Build output
+build/
+dist/
+*.spec
+node_modules/
+_test.html
+
 # Secrets
 .env
 .env.*

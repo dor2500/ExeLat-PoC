@@ -1,0 +1,11 @@
+{
+  "name": "exelat-poc",
+  "private": true,
+  "description": "Stylesheet build for the ExeLat dashboard",
+  "scripts": {
+    "css": "tailwindcss -i src/tailwind.css -o assets/app.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.17"
+  }
+}
