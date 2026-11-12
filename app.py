@@ -22,7 +22,7 @@ from main import analyze
 from patcher import build_translated
 
 APP_NAME = "ExeLat"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.1.0"
 
 FILE_TYPES = ("Windows binaries (*.exe;*.dll;*.mui;*.ocx;*.cpl;*.scr)", "All files (*.*)")
 

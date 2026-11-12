@@ -32,8 +32,9 @@ import sys
 
 import pefile
 
+from delphi_forms import form_view, is_form, parse_form
 from glossary import lookup
-from patcher import build_translated, iter_resources
+from patcher import RT_RCDATA, build_translated, iter_resources
 from pe_resources import (
     RT_DIALOG, RT_MENU, RT_STRING, ResourceFormatError,
     dialog_view, parse_dialog, parse_menu, parse_string_block, walk_menu,
@@ -80,8 +81,19 @@ def analyze(path: str) -> dict:
             except ResourceFormatError:
                 unparsed += 1
 
+        forms = []                                   # Delphi / C++Builder forms
+        for name, lang, blob in iter_resources(pe, RT_RCDATA):
+            if not is_form(blob):
+                continue
+            try:
+                forms.append({"resource": str(name), "lang": lang, **form_view(parse_form(blob))})
+            except (ResourceFormatError, RecursionError):
+                unparsed += 1
+
         # One glossary lookup per distinct piece of text, wherever it appears.
         texts = {s["source"] for s in strings}
+        for form in forms:
+            texts.update(form["texts"])
         for dialog in dialogs:
             texts.add(dialog["title"])
             texts.update(item["text"] for item in dialog["items"])
@@ -107,7 +119,7 @@ def analyze(path: str) -> dict:
                 "rawSize": section.SizeOfRawData,
             } for section in pe.sections],
             "resources": resource_counts,
-            "strings": strings, "dialogs": dialogs, "menus": menus,
+            "strings": strings, "dialogs": dialogs, "menus": menus, "forms": forms,
             "unparsed": unparsed,
             "translations": translations,
         }
@@ -127,6 +139,9 @@ def translatable_texts(analysis: dict) -> list[str]:
                 seen.setdefault(item["text"])
     for menu in analysis["menus"]:
         for text in menu["items"]:
+            seen.setdefault(text)
+    for form in analysis["forms"]:
+        for text in form["texts"]:
             seen.setdefault(text)
     return [text for text in seen if text and any(ch.isalpha() for ch in text)]
 
@@ -152,7 +167,7 @@ def main() -> int:
     texts = translatable_texts(analysis)
     translations = dict(analysis["translations"])
     print(f"[unpack]    {len(analysis['strings'])} strings, {len(analysis['dialogs'])} dialogs, "
-          f"{len(analysis['menus'])} menus -> {len(texts)} distinct texts")
+          f"{len(analysis['menus'])} menus, {len(analysis['forms'])} Delphi forms -> {len(texts)} distinct texts")
     print(f"[glossary]  {sum(t in translations for t in texts)} translated offline")
 
     if args.ai != "none":
@@ -170,7 +185,8 @@ def main() -> int:
     report = build_translated(args.exe, args.out, translations,
                               mirror_dialogs=not args.no_mirror, mirror_process=args.mirror_windows)
     print(f"[repack]    {report['output']}: {report['strings']} strings, {report['dialogs']} dialogs "
-          f"({report['dialogsMirrored']} mirrored), {report['menus']} menus, {report['skipped']} skipped")
+          f"({report['dialogsMirrored']} mirrored), {report['menus']} menus, "
+          f"{report['forms']} Delphi forms ({report['formTexts']} texts), {report['skipped']} skipped")
     if report["signatureRemoved"]:
         print("            the original signature was removed; sign the new file yourself")
     if report["appendedBytes"]:

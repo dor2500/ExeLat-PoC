@@ -21,12 +21,15 @@ import re
 import shutil
 import subprocess
 import tempfile
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 API_MODEL = "claude-opus-5-5"
 CLI_MODEL = "sonnet"
 BATCH_SIZE = 60
 WORKERS = 3
+RETRIES = 2
 
 SYSTEM_PROMPT = """You localise the user interface of Windows desktop programs into Hebrew.
 
@@ -157,15 +160,15 @@ def _call_cli(executable: str, batch: list[tuple[int, str]]) -> dict[int, str]:
         raise TranslationError("Claude Code took too long to answer.") from error
     except OSError as error:
         raise TranslationError(f"Could not start Claude Code: {error}") from error
-    if completed.returncode != 0:
-        detail = (completed.stderr or completed.stdout or "").strip()[:300]
-        raise TranslationError(f"Claude Code failed: {detail or 'no output'}")
     try:
         envelope = json.loads(completed.stdout)
-    except ValueError as error:
-        raise TranslationError("Claude Code returned an unexpected answer.") from error
-    if envelope.get("is_error"):
-        raise TranslationError(f"Claude Code reported an error: {str(envelope.get('result'))[:300]}")
+    except ValueError:
+        envelope = None
+    if completed.returncode != 0 or envelope is None or envelope.get("is_error"):
+        # On failure the CLI still prints its JSON envelope; the readable part is "result".
+        detail = str(envelope.get("result") or envelope.get("subtype") or "") if envelope else ""
+        detail = detail or (completed.stderr or completed.stdout or "").strip()
+        raise TranslationError(f"Claude Code failed: {detail[:200] or 'no output'}")
     return _parse_reply(str(envelope.get("result", "")))
 
 
@@ -198,8 +201,26 @@ def translate(texts: list[str], provider: str = "cli", api_key: str | None = Non
     if on_progress:
         on_progress(0, len(texts))
 
+    stop = threading.Event()
+
+    def call_with_retry(batch):
+        """A batch can fail for passing reasons (a busy service, one malformed
+        answer). Try again before giving up on its strings."""
+        for attempt in range(RETRIES + 1):
+            if stop.is_set():
+                raise TranslationError("Stopped after an earlier error.")
+            try:
+                return call(batch)
+            except TranslationError as error:
+                message = str(error)
+                permanent = ("key was rejected", "not installed", "limit", "refused", "declined")
+                if attempt == RETRIES or stop.is_set() or any(word in message for word in permanent):
+                    stop.set()            # an exhausted quota fails every batch: do not keep spending calls
+                    raise
+                time.sleep(2 + 3 * attempt)
+
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
-        for batch, future in [(b, pool.submit(call, b)) for b in batches]:
+        for batch, future in [(b, pool.submit(call_with_retry, b)) for b in batches]:
             try:
                 answers = future.result()
             except TranslationError as error:

@@ -30,7 +30,8 @@ Plenty of useful Windows software was never released in Hebrew, and its source c
 
 ### Verified result
 
-7-Zip File Manager (`7zFM.exe`, 406 distinct UI texts) was translated end to end in about 30 seconds. The output starts, its main window reports `WS_EX_LAYOUTRTL`, and its menu reads `קובץ → פתח, שנה שם, מחק, מאפיינים, צור תיקיה…` with shortcuts (`F2`, `Ctrl+N`) intact.
+- **Win32:** 7-Zip File Manager (`7zFM.exe`, 406 distinct UI texts) was translated end to end in about 30 seconds. The output starts, its main window reports `WS_EX_LAYOUTRTL`, and its menu reads `קובץ → פתח, שנה שם, מחק, מאפיינים, צור תיקיה…` with shortcuts (`F2`, `Ctrl+N`) intact.
+- **Delphi:** Inno Setup Compiler (`Compil32.exe`, 14 forms, 694 texts) was rebuilt with translated forms. The output starts, its forms report right-to-left reading, and form titles and buttons show the Hebrew text.
 
 ## ⬇️ Download
 
@@ -55,6 +56,7 @@ Programs installed under `C:\Program Files` cannot be written to without adminis
 ### 📦 Static Translation — implemented
 - Reads and rewrites `RT_STRING`, `RT_DIALOG` (both `DLGTEMPLATE` and `DLGTEMPLATEEX`) and `RT_MENU` (classic and extended) resources.
 - Every parser has a matching serializer, and a resource is only modified if rebuilding it unchanged reproduces the original bytes. This check passes for all 4,211 resources tested across ~400 Windows system files and third-party programs.
+- **Delphi / C++Builder programs:** reads and rewrites binary form resources (`TPF0` in `RT_RCDATA`), translating `Caption`, `Hint` and list items, and sets `BiDiMode = bdRightToLeft` on each form. Round-trip check passes for all 109 forms found in 16 real programs.
 - AI translations are validated before use: placeholders (`%s`, `%1`, `{0}`) and keyboard shortcuts must survive unchanged, otherwise the string is left for you.
 - Mirrors dialogs with `WS_EX_LAYOUTRTL`. Mirrors main windows by prefixing the version resource's `FileDescription` with two left-to-right marks, which makes Windows enable RTL layout for the whole process.
 - Writes the result with the Windows resource-update API, removes the now-invalid Authenticode signature, carries over appended data, and recomputes the PE checksum.
@@ -69,13 +71,12 @@ For programs that draw their own UI as pixels. Capture the window, OCR it, and d
 
 ## ⚠️ What it can and cannot translate
 
-ExeLat changes text that lives in **Win32 resources**. That covers classic Win32 and MFC programs well. It does **not** reach:
+ExeLat changes text that lives in **Win32 resources** and **Delphi forms**. That covers classic Win32, MFC and Delphi / C++Builder programs. It does **not** reach:
 
 | Not translated | Why |
 |---|---|
 | Text built in code | It is in the compiled instructions, not in a resource |
 | .NET (WinForms/WPF), Qt, Electron, Java apps | They keep their UI in their own formats |
-| Delphi / C++Builder forms | Stored as `RCDATA` form streams, not dialogs |
 | Programs with external language files | Translate those files instead (7-Zip, for example, also has `Lang\*.txt`) |
 | Packed or self-verifying executables | They detect the change and refuse to run |
 | Installers | Their payload is appended data that most installers checksum |
@@ -86,6 +87,8 @@ Other things to know:
 - **`.mui` files.** Modern Windows components keep resources in `en-US\app.exe.mui`. ExeLat tells you when an `.exe` has none of its own; open the `.mui` file instead.
 - **Non-Unicode programs** show Hebrew only when the Windows "language for non-Unicode programs" is Hebrew.
 - **Layout.** Mirroring is done by Windows; controls are not resized, so a long translation can be clipped.
+- **Delphi.** Forms get right-to-left reading and alignment, but control positions are not mirrored, and there is no visual preview for them.
+- **AI usage.** A large program is several hundred texts, sent in batches of 60. Through Claude Code this counts against your plan's usage limit; through the API it is billed to your key. If the limit is reached, ExeLat stops, keeps what was translated, and you can continue later.
 
 ## 🧰 Tech Stack
 
@@ -132,6 +135,7 @@ ExeLat-PoC/
 ├── app.py              # desktop app (pywebview bridge)
 ├── main.py             # analysis + command line
 ├── pe_resources.py     # string table / dialog / menu / version formats
+├── delphi_forms.py     # Delphi / C++Builder binary forms
 ├── patcher.py          # writes the translated executable
 ├── translator.py       # Claude translation + validation
 ├── glossary.py         # offline EN/RU -> HE UI terms

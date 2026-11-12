@@ -19,6 +19,7 @@ from ctypes import wintypes
 
 import pefile
 
+from delphi_forms import build_form, decode_string, encode_string, is_form, parse_form, set_right_to_left, text_slots
 from pe_resources import (
     RT_DIALOG, RT_MENU, RT_STRING, RT_VERSION, WS_EX_LAYOUTRTL, ResourceFormatError,
     build_dialog, build_menu, build_string_block, build_version,
@@ -27,6 +28,7 @@ from pe_resources import (
 )
 
 IMAGE_DIRECTORY_ENTRY_SECURITY = 4
+RT_RCDATA = 10
 LRM = "‎"
 
 
@@ -61,7 +63,7 @@ def plan_updates(pe, translations: dict[str, str], mirror_dialogs: bool, mirror_
     Returns (updates, report); updates are (type, name, lang, bytes)."""
     updates = []
     report = {"strings": 0, "dialogs": 0, "dialogsMirrored": 0, "menus": 0, "menuItems": 0,
-              "controls": 0, "skipped": 0, "processMirrored": False}
+              "controls": 0, "forms": 0, "formTexts": 0, "skipped": 0, "processMirrored": False}
 
     for name, lang, blob in iter_resources(pe, RT_STRING):
         strings = parse_string_block(blob)
@@ -120,6 +122,34 @@ def plan_updates(pe, translations: dict[str, str], mirror_dialogs: bool, mirror_
             updates.append((RT_MENU, name, lang, build_menu(menu)))
             report["menus"] += 1
             report["menuItems"] += changed
+
+    # Delphi / C++Builder programs keep their forms in RCDATA, not in dialogs.
+    # Their own right-to-left switch is the BiDiMode property. Mirroring the
+    # whole process behind the framework's back as well would flip the text
+    # twice, so for these programs BiDiMode is used and the process is left alone.
+    forms = [(name, lang, blob) for name, lang, blob in iter_resources(pe, RT_RCDATA) if is_form(blob)]
+    if forms:
+        mirror_process = False
+    for name, lang, blob in forms:
+        try:
+            form = parse_form(blob)
+            if build_form(form) != blob:
+                raise ResourceFormatError("form does not round-trip")
+        except (ResourceFormatError, RecursionError):
+            report["skipped"] += 1
+            continue
+        changed = 0
+        for container, index in text_slots(form):
+            source = decode_string(container[index])
+            new_text = translate_text(source, translations)
+            if new_text != source:
+                container[index] = encode_string(new_text)
+                changed += 1
+        right_to_left = mirror_dialogs and set_right_to_left(form)
+        if changed or right_to_left:
+            updates.append((RT_RCDATA, name, lang, build_form(form)))
+            report["forms"] += 1
+            report["formTexts"] += changed
 
     if mirror_process:
         # Windows turns on right-to-left layout for every top-level window of a

@@ -244,7 +244,8 @@
         heroBody: 'Open a Win32 program. ExeLat reads its menus, dialogs and string tables, translates them to Hebrew, mirrors the layout, and writes a translated copy of the .exe.',
         optDialogs: 'Mirror dialogs', optWindows: 'Mirror main windows',
         build: 'Build translated EXE', buildBusy: 'Building…', reveal: 'Show in folder',
-        buildDone: (r) => `Saved ${r.output} — ${r.strings} strings, ${r.menuItems} menu items, ${r.controls} dialog texts; ${r.dialogsMirrored} dialogs mirrored${r.processMirrored ? ', main windows mirrored' : ''}.`,
+        buildDone: (r) => `Saved ${r.output} — ${r.strings} strings, ${r.menuItems} menu items, ${r.controls} dialog texts` + (r.forms ? `, ${r.formTexts} texts in ${r.forms} Delphi forms (set right-to-left)` : '') + `; ${r.dialogsMirrored} dialogs mirrored${r.processMirrored ? ', main windows mirrored' : ''}.`,
+        previewDelphi: (n) => `This is a Delphi program. Its ${n} forms are translated and set right-to-left when you build, but there is no visual preview for Delphi forms.`,
         buildSig: 'The original digital signature was removed (it cannot be valid for a changed file); Windows may show a warning until you sign the new file.',
         buildAppended: 'Appended data was carried over. Installers and self-checking programs may still refuse to run.',
         buildSkipped: (n) => `${n} resource(s) had an unusual format and were left untouched.`,
@@ -266,9 +267,9 @@
         infoError: (e) => `Could not read the file: ${e}`,
         runDemo: 'Load sample installer', reset: 'Reset',
         howTitle: 'What happens to the file',
-        howBody: 'The original is never changed. Standard terms are translated offline from a built-in glossary; the rest can be translated by AI or typed by hand. Only text stored in the program\'s resources can be translated — text built in code, and frameworks like .NET, Qt or Delphi forms, are out of reach.',
+        howBody: 'The original is never changed. Standard terms are translated offline from a built-in glossary; the rest can be translated by AI or typed by hand. Only text stored in the program\'s resources can be translated — Win32 and Delphi programs are supported; text built in code, and frameworks like .NET, Qt or Electron, are out of reach.',
         noFile: 'No file loaded', statusIdle: 'waiting for a file',
-        statSections: 'sections', statStrings: 'texts found', statDialogs: 'dialogs', statTranslated: 'translated',
+        statSections: 'sections', statStrings: 'texts found', statDialogs: 'dialogs & forms', statTranslated: 'translated',
         step1: 'Unpack', step1d: 'menus, dialogs, strings', step2: 'Translate', step2d: 'glossary, then AI / you',
         step3: 'UI RTL Fix', step3d: 'mirror every dialog', step4: 'Repack', step4d: 'write the new .exe',
         st1: 'reading PE headers and resources…', st2: 'matching texts against the glossary…', st3: 'mirroring dialog layouts…',
@@ -297,7 +298,8 @@
         heroBody: 'פתחו תוכנת Win32. ‏ExeLat קורא את התפריטים, הדיאלוגים וטבלאות המחרוזות, מתרגם אותם לעברית, הופך את הפריסה לימין‑לשמאל, וכותב עותק מתורגם של קובץ ה‑exe.',
         optDialogs: 'היפוך דיאלוגים', optWindows: 'היפוך חלונות ראשיים',
         build: 'בנה EXE מתורגם', buildBusy: 'בונה…', reveal: 'הצג בתיקייה',
-        buildDone: (r) => `נשמר ${r.output} — ${r.strings} מחרוזות, ${r.menuItems} פריטי תפריט, ${r.controls} טקסטים בדיאלוגים; ${r.dialogsMirrored} דיאלוגים הופכו${r.processMirrored ? ', החלונות הראשיים הופכו' : ''}.`,
+        buildDone: (r) => `נשמר ${r.output} — ${r.strings} מחרוזות, ${r.menuItems} פריטי תפריט, ${r.controls} טקסטים בדיאלוגים` + (r.forms ? `, ${r.formTexts} טקסטים ב‑${r.forms} טפסי Delphi (הוגדרו מימין לשמאל)` : '') + `; ${r.dialogsMirrored} דיאלוגים הופכו${r.processMirrored ? ', החלונות הראשיים הופכו' : ''}.`,
+        previewDelphi: (n) => `זו תוכנת Delphi. ${n} הטפסים שלה מתורגמים ומוגדרים מימין לשמאל בזמן הבנייה, אבל אין תצוגה מקדימה חזותית לטפסי Delphi.`,
         buildSig: 'החתימה הדיגיטלית המקורית הוסרה (היא לא יכולה להיות תקפה לקובץ ששונה); Windows עשוי להציג אזהרה עד שתחתמו על הקובץ החדש.',
         buildAppended: 'הנתונים שצורפו לסוף הקובץ הועברו. תוכנות התקנה ותוכנות שבודקות את עצמן עדיין עלולות לסרב לרוץ.',
         buildSkipped: (n) => `${n} משאבים בפורמט חריג נשארו ללא שינוי.`,
@@ -319,9 +321,9 @@
         infoError: (e) => `לא ניתן לקרוא את הקובץ: ${e}`,
         runDemo: 'טען התקנה לדוגמה', reset: 'איפוס',
         howTitle: 'מה קורה לקובץ',
-        howBody: 'הקובץ המקורי לא משתנה לעולם. מונחים נפוצים מתורגמים ללא רשת ממילון מובנה; את השאר אפשר לתרגם עם AI או להקליד ידנית. ניתן לתרגם רק טקסט שנשמר במשאבי התוכנה — טקסט שנבנה בקוד, ותשתיות כמו ‎.NET‎, ‏Qt או טפסי Delphi, אינם נגישים.',
+        howBody: 'הקובץ המקורי לא משתנה לעולם. מונחים נפוצים מתורגמים ללא רשת ממילון מובנה; את השאר אפשר לתרגם עם AI או להקליד ידנית. ניתן לתרגם רק טקסט שנשמר במשאבי התוכנה — תוכנות Win32 ו‑Delphi נתמכות; טקסט שנבנה בקוד, ותשתיות כמו ‎.NET‎, ‏Qt או Electron, אינם נגישים.',
         noFile: 'לא נטען קובץ', statusIdle: 'ממתין לקובץ',
-        statSections: 'מקטעים', statStrings: 'טקסטים שנמצאו', statDialogs: 'דיאלוגים', statTranslated: 'תורגמו',
+        statSections: 'מקטעים', statStrings: 'טקסטים שנמצאו', statDialogs: 'דיאלוגים וטפסים', statTranslated: 'תורגמו',
         step1: 'פירוק', step1d: 'תפריטים, דיאלוגים, מחרוזות', step2: 'תרגום', step2d: 'מילון, ואז AI / אתם',
         step3: 'תיקון RTL', step3d: 'היפוך כל דיאלוג', step4: 'אריזה מחדש', step4d: 'כתיבת ה‑exe החדש',
         st1: 'קורא כותרות PE ומשאבים…', st2: 'משווה טקסטים למילון…', st3: 'הופך את פריסת הדיאלוגים…',
@@ -435,6 +437,7 @@
       const dialogs = a.dialogs.filter((d) => d.items.some((i) => i.visible));
       a.strings.forEach((s) => add(s.source, `STR ${s.id}`));
       (a.menus || []).forEach((m) => m.items.forEach((text) => add(text, `MENU ${m.name}`)));
+      (a.forms || []).forEach((f) => f.texts.forEach((text) => add(text, `FORM ${f.name}`)));
       a.dialogs.forEach((d) => { add(d.title, `DLG ${d.name}`); d.items.forEach((i) => i.kind !== 'edit' && add(i.text, `DLG ${d.name}`)); });
       return { ...a, dialogs, rows, list: [...rows.values()], unparsed: a.unparsed || 0 };
     }
@@ -480,7 +483,7 @@
       $('statusText').textContent = stage === 4 ? t('stDone', translatedCount(), S.list.length) : t('st' + stage);
       $('statSections').textContent = S.sections.length;
       $('statStrings').textContent = S.list.length;
-      $('statDialogs').textContent = S.dialogs.length;
+      $('statDialogs').textContent = S.dialogs.length + (S.forms || []).length;
       $('statTranslated').textContent = stage >= 2 ? translatedCount() : 0;
 
       const bytes = S.file.head.match(/../g) || [];
@@ -570,7 +573,7 @@
       const has = S && S.dialogs.length > 0;
       $('previewGrid').classList.toggle('hidden', !has);
       $('previewEmpty').classList.toggle('hidden', !!has);
-      $('previewEmpty').textContent = t(S ? 'previewEmptyNone' : 'previewEmptyIdle');
+      $('previewEmpty').textContent = !S ? t('previewEmptyIdle') : (S.forms || []).length ? t('previewDelphi', S.forms.length) : t('previewEmptyNone');
       $('prevDlg').disabled = !has || dlgIndex === 0;
       $('nextDlg').disabled = !has || dlgIndex >= S.dialogs.length - 1;
       $('dlgSelect').disabled = !has;
