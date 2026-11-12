@@ -28,6 +28,8 @@ Plenty of useful Windows software was never released in Hebrew, and its source c
 
 ![ExeLat dashboard](assets/mockup_preview.png)
 
+<sub>The dashboard after checking the whole 7-Zip folder, before AI translation: 54 of 482 texts come from the offline glossary.</sub>
+
 ### Verified result
 
 - **Win32:** 7-Zip File Manager (`7zFM.exe`, 406 distinct UI texts) was translated end to end in about 30 seconds. The output starts, its main window reports `WS_EX_LAYOUTRTL`, and its menu reads `קובץ → פתח, שנה שם, מחק, מאפיינים, צור תיקיה…` with shortcuts (`F2`, `Ctrl+N`) intact.
